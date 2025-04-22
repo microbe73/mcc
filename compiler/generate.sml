@@ -1,0 +1,3 @@
+structure Generate = struct
+
+end

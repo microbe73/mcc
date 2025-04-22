@@ -1,0 +1,16 @@
+Library
+    structure Token
+    structure AST
+    structure Scan
+    structure Parse
+    structure Generate
+is
+    $/basis.cm
+    $/regexp-lib.cm
+    $/smlnj-lib.cm
+    token.sml
+    ast.sml
+    scan.sml
+    parse.sml
+    generate.sml
+
