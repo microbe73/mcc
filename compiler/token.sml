@@ -11,6 +11,8 @@ structure Token = struct
   | CBrac
   | Identifier of string
   | KW of keyword
+  | IntLiteral of int
+  | WS
 
 end
   

@@ -5,8 +5,10 @@ structure Scan = struct
       (* structure E = BackTrackEngine *)
       (* structure E = DfaEngine *)
     )
-  fun matched (plc : string) matcher =
+  structure MT = MatchTree
+  fun matched (plc : Token.token) matcher =
     (plc, matcher)
+  fun matched2 plc matcher = matcher
   fun scan s =
           let
         (**
@@ -16,11 +18,26 @@ structure Scan = struct
          * The match parameter is described here:
          * 
          *)
+        fun full_name{first:string,last:string,age:int,balance:real}:string =
+          raise Fail "todo"
+        fun handler{len : int, pos : StringCvt.cs } :
+          string =
+          raise Fail "TODO"
         val regexes = [
-          ("[a-zA-Z]*",   fn match => matched "1st" match),
-          ("[0-9]*",      fn match => matched "2nd" match),
-          ("1tom|2jerry", fn match => matched "3rd" match)
+          ("{",             fn match => matched2 Token.OBrac match),
+          ("}",             fn match => matched2 Token.CBrac match),
+          (";",             fn match => matched2 Token.Semcol match),
+          ("\\(",           fn match => matched2 Token.OPar match),
+          ("\\)",           fn match => matched2 Token.CPar match),
+          ("int",           fn match => matched2 (Token.KW Token.Int) match),
+          ("return",        fn match => matched2 (Token.KW Token.Return) match),
+          ("[a-zA-Z][a-zA-Z0-9]*",
+                            fn match => matched2 (Token.Identifier "") match ),
+          ("[0-9]+",        fn match => matched2 (Token.IntLiteral 0) match),
+          ("[ \t\n]+",      fn match => matched2 Token.WS match)
         ]
+        val match_result = StringCvt.scanString (RE.match regexes) s
+        (* {len : int, pos : StringCvt.cs } MatchTree.match_tree *)
       in
         (**
          * StringCvt.scanString will traverse the `input` string and apply
@@ -29,6 +46,9 @@ structure Scan = struct
          * It's sort of a streaming matching process. The end result, however,
          * depends on your implementation above, in the match functions.
          *)
-        StringCvt.scanString (RE.match regexes) s
+         (case match_result
+            of NONE => raise Fail "todo"
+             | SOME result => MatchTree.root (result)
+         )
       end
 end
