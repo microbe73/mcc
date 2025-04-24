@@ -8,33 +8,23 @@ structure Scan = struct
   structure MT = MatchTree
   fun matched (plc : Token.token) matcher =
     (plc, matcher)
-  fun matched2 plc matcher = matcher
-  fun scan s =
-          let
-        (**
-         * A list of (regexp, match function) pairs. The function called by
-         * RE.match is the one associated with the regexp that matched.
-         *
-         * The match parameter is described here:
-         * 
-         *)
-        fun full_name{first:string,last:string,age:int,balance:real}:string =
-          raise Fail "todo"
-        fun handler{len : int, pos : StringCvt.cs } :
-          string =
-          raise Fail "TODO"
+  fun getlen {len: int, pos:StringCvt.cs} : int =
+    len
+  fun scan (s : string) : Token.token * string =
+        let
+        
         val regexes = [
-          ("{",             fn match => matched2 Token.OBrac match),
-          ("}",             fn match => matched2 Token.CBrac match),
-          (";",             fn match => matched2 Token.Semcol match),
-          ("\\(",           fn match => matched2 Token.OPar match),
-          ("\\)",           fn match => matched2 Token.CPar match),
-          ("int",           fn match => matched2 (Token.KW Token.Int) match),
-          ("return",        fn match => matched2 (Token.KW Token.Return) match),
+          ("{",             fn match => matched Token.OBrac match),
+          ("}",             fn match => matched Token.CBrac match),
+          (";",             fn match => matched Token.Semcol match),
+          ("\\(",           fn match => matched Token.OPar match),
+          ("\\)",           fn match => matched Token.CPar match),
+          ("int",           fn match => matched (Token.KW Token.Int) match),
+          ("return",        fn match => matched (Token.KW Token.Return) match),
           ("[a-zA-Z][a-zA-Z0-9]*",
-                            fn match => matched2 (Token.Identifier "") match ),
-          ("[0-9]+",        fn match => matched2 (Token.IntLiteral 0) match),
-          ("[ \t\n]+",      fn match => matched2 Token.WS match)
+                            fn match => matched (Token.Identifier "") match ),
+          ("[0-9]+",        fn match => matched (Token.IntLiteral 0) match),
+          ("[ \t\n]+",      fn match => matched Token.WS match)
         ]
         val match_result = StringCvt.scanString (RE.match regexes) s
         (* {len : int, pos : StringCvt.cs } MatchTree.match_tree *)
@@ -47,8 +37,46 @@ structure Scan = struct
          * depends on your implementation above, in the match functions.
          *)
          (case match_result
-            of NONE => raise Fail "todo"
-             | SOME result => MatchTree.root (result)
+            of NONE => raise Fail "Syntax error, unable to parse"
+             | SOME (token, result_root) =>
+                 let
+                   val result = MatchTree.root (result_root)
+                   val len = getlen result
+                   val new_str = String.extract (s, len, NONE)
+                 in
+                   (case token
+                      of Token.Identifier emp =>
+                           (Token.Identifier (String.substring (s, 0, len)),
+                            new_str)
+                       | Token.IntLiteral emp =>
+                           let
+                             val substr = String.substring (s, 0, len)
+                             val num = Int.fromString substr
+                           in
+                             (case num
+                                of NONE => raise Fail "could not parse int"
+                                 | SOME n => (Token.IntLiteral n, new_str)
+                             )
+                           end
+                       | _ => (token, new_str)
+                   )
+                 end
          )
       end
+  fun scan_toks (str : string) : Token.token list =
+    (case str
+       of "" => []
+        | _ =>
+            let
+              val res = scan str
+              val nexttok = #1(res)
+              val newstr = #2(res)
+            in
+              (case nexttok
+                 of Token.WS => scan_toks (newstr)
+                  | _ => nexttok :: scan_toks (newstr)
+              )
+            end
+    )
+    
 end
