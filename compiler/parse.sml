@@ -25,6 +25,33 @@ structure Parse = struct
         AST.exp * (Token.token list) =
         (case tlist
            of (T.IntLiteral num :: rest) => (AST.Const num, rest)
+            | (T.Negation :: rest) =>
+                let
+                  val rest_parsed = nextExp rest
+                in
+                  (case rest_parsed
+                     of (inner_exp, rest1) =>
+                          (AST.UnOp (AST.Negation, inner_exp), rest1)
+                  )
+                end
+            | (T.Not :: rest) =>
+                let
+                  val rest_parsed = nextExp rest
+                in
+                  (case rest_parsed
+                     of (inner_exp, rest1) =>
+                          (AST.UnOp (AST.Not, inner_exp), rest1)
+                  )
+                end
+            | (T.Complement :: rest) =>
+                let
+                  val rest_parsed = nextExp rest
+                in
+                  (case rest_parsed
+                     of (inner_exp, rest1) =>
+                          (AST.UnOp (AST.Complement, inner_exp), rest1)
+                  )
+                end
             | _ => raise Fail "Parse error: could not parse expression"
         )
       and nextStatement (tlist : Token.token list) :

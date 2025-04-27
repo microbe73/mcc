@@ -13,6 +13,9 @@ structure Token = struct
   | KW of keyword
   | IntLiteral of int
   | WS
+  | Negation
+  | Not
+  | Complement
 
 end
   
