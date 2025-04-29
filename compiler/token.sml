@@ -13,9 +13,12 @@ structure Token = struct
   | KW of keyword
   | IntLiteral of int
   | WS
-  | Negation
+  | Minus
   | Not
   | Complement
+  | Plus
+  | Times
+  | Div
 
 end
   

@@ -18,20 +18,20 @@ structure Parse = struct
                                | _ => raise Fail "Parse error, closing } missing"
                      )
                    end
-            | _ => raise Fail "todo"
+            | _ => raise Fail "Parse error, unable to find function declaration"
 
         )
       and nextExp (tlist : Token.token list) :
         AST.exp * (Token.token list) =
         (case tlist
            of (T.IntLiteral num :: rest) => (AST.Const num, rest)
-            | (T.Negation :: rest) =>
+            | (T.Minus :: rest) =>
                 let
                   val rest_parsed = nextExp rest
                 in
                   (case rest_parsed
                      of (inner_exp, rest1) =>
-                          (AST.UnOp (AST.Negation, inner_exp), rest1)
+                          (AST.UnOp (AST.Negation , inner_exp), rest1)
                   )
                 end
             | (T.Not :: rest) =>

@@ -13,6 +13,7 @@ structure Generate = struct
                     genExp inner_exp ^ "\tcmpl  $0, %rax\n" ^
                     "\tmovl  $0, %rax\n" ^ "\tsete  %al"
             )
+        | AST.BinOp (binop, t1, t2) => raise Fail "todo"
     )
   fun genStatement (b : AST.statement) : string =
     (case b
@@ -31,5 +32,23 @@ structure Generate = struct
              of AST.Fun (name, body) =>
                   "\t.globl _" ^ name ^ "\n" ^ genStatement body ^ generate rest
           )
+    )
+  fun printExp (exp : AST.exp ) : string =
+    (case exp
+       of AST.Const n => Int.toString n
+        | AST.UnOp (unop, exp1) =>
+            "(" ^ AST.unop_str unop ^ " " ^ printExp exp1 ^ ")"
+        | AST.BinOp (binop, exp1, exp2) =>
+            "(" ^ printExp exp1 ^ " " ^ AST.binop_str binop ^ " " ^ printExp
+            exp2 ^ ")"
+    )
+
+  fun printAST (t : AST.func ) : string =
+    (case t
+       of AST.Fun (name, statement) =>
+            (case statement
+               of AST.Return exp =>
+                    "Fun " ^ name ^ " Return " ^ printExp exp
+            )
     )
 end
