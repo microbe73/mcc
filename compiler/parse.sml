@@ -21,7 +21,7 @@ structure Parse = struct
             | _ => raise Fail "Parse error, unable to find function declaration"
 
         )
-      and nextExpHelper (tlist : T.token list) :
+(*      and nextExpHelper (tlist : T.token list) :
         AST.exp * (toklist) =
         let
           val term_w_toks = nextTerm(tlist)
@@ -47,7 +47,7 @@ structure Parse = struct
                 end
               | (term, rest) => (term, rest)
            )
-         end
+         end*)
       and nextExp (tlist : Token.token list) :
         AST.exp * toklist =
         let
@@ -56,7 +56,7 @@ structure Parse = struct
           (case term_w_toks
             of (term, T.Plus :: rest) =>
               let
-                val next_term_w_toks = nextExpHelper rest
+                val next_term_w_toks = nextExp rest
               in
                 (case next_term_w_toks
                    of (next_term, new_toks) =>
@@ -65,17 +65,17 @@ structure Parse = struct
               end
               | (term, T.Minus :: rest) =>
               let
-                val next_term_w_toks = nextExpHelper rest
+                val next_term_w_toks = nextExp rest
               in
                 (case next_term_w_toks
                    of (next_term, new_toks) =>
                     (AST.BinOp (AST.Minus, term, next_term), new_toks)
                 )
               end
-              | (term, rest) => raise Fail "Unable to parse expression"
+              | (term, rest) => (term, rest)
             )
         end
-      and nextTermHelper (tlist : Token.token list) :
+(*      and nextTermHelper (tlist : Token.token list) :
            (AST.exp * toklist) =
         let
           val factor_w_toks = nextFactor(tlist)
@@ -102,15 +102,16 @@ structure Parse = struct
               | (factor, rest) => (factor, rest)
            )
          end
+         *)
       and nextTerm (tlist : Token.token list):
            (AST.exp * toklist) =
         let
-          val factor_w_toks = nextTerm(tlist)
+          val factor_w_toks = nextFactor(tlist)
         in
           (case factor_w_toks
             of (factor, T.Times :: rest) =>
               let
-                val next_factor_w_toks = nextTermHelper rest
+                val next_factor_w_toks = nextTerm rest
               in
                 (case next_factor_w_toks
                    of (next_factor, new_toks) =>
@@ -119,20 +120,56 @@ structure Parse = struct
               end
               | (factor, T.Div :: rest) =>
               let
-                val next_factor_w_toks = nextTermHelper rest
+                val next_factor_w_toks = nextTerm rest
               in
                 (case next_factor_w_toks
                    of (next_factor, new_toks) =>
                     (AST.BinOp (AST.Div, factor, next_factor), new_toks)
                 )
               end
-              | (term, rest) =>
-                  raise Fail "Unable to parse expression (look at a division)"
+              | (factor, rest) => (factor, rest)
             )
         end
       and nextFactor(tlist : Token.token list) :
             (AST.exp * toklist) =
-            raise Fail "todo"
+            (case tlist
+              of T.OPar :: rest =>
+                let
+                  val exp_w_toks = nextExp rest
+                in
+                  (case exp_w_toks
+                    of (exp, (T.CPar :: toks)) =>
+                      (exp, toks)
+                     | _ => raise Fail "Parse error, closing ) missing"
+                  )
+                end
+                | T.Minus :: rest =>
+                  let
+                    val exp_w_toks = nextFactor rest
+                  in
+                    (case exp_w_toks
+                      of (exp, toks) => (AST.UnOp (AST.Negation, exp), toks)
+                    )
+                  end
+                | T.Complement :: rest =>
+                  let
+                    val exp_w_toks = nextFactor rest
+                  in
+                    (case exp_w_toks
+                      of (exp, toks) => (AST.UnOp (AST.Complement, exp), toks)
+                    )
+                  end
+                | T.Not :: rest =>
+                  let
+                    val exp_w_toks = nextFactor rest
+                  in
+                    (case exp_w_toks
+                      of (exp, toks) => (AST.UnOp (AST.Not, exp), toks)
+                    )
+                  end
+                | (T.IntLiteral num :: rest) => (AST.Const num, rest)
+                | _ => raise Fail "Parse error, could not parse factor"
+             )
       and nextStatement (tlist : Token.token list) :
         (AST.statement * toklist) =
         (case tlist
@@ -163,34 +200,4 @@ structure Parse = struct
     end
 
 end
-(* case tlist
-             of (T.IntLiteral num :: rest) => (AST.Const num, rest)
-              | (T.Minus :: rest) =>
-                  let
-                    val rest_parsed = nextExp rest
-                  in
-                    (case rest_parsed
-                       of (inner_exp, rest1) =>
-                            (AST.UnOp (AST.Negation , inner_exp), rest1)
-                    )
-                  end
-              | (T.Not :: rest) =>
-                  let
-                    val rest_parsed = nextExp rest
-                  in
-                    (case rest_parsed
-                       of (inner_exp, rest1) =>
-                            (AST.UnOp (AST.Not, inner_exp), rest1)
-                    )
-                  end
-              | (T.Complement :: rest) =>
-                  let
-                    val rest_parsed = nextExp rest
-                  in
-                    (case rest_parsed
-                       of (inner_exp, rest1) =>
-                            (AST.UnOp (AST.Complement, inner_exp), rest1)
-                    )
-                  end
-              | _ => raise Fail "Parse error: could not parse expression"
-          *)
+
