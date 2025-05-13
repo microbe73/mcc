@@ -13,7 +13,22 @@ structure Generate = struct
                     genExp inner_exp ^ "\tcmpl  $0, %rax\n" ^
                     "\tmovl  $0, %rax\n" ^ "\tsete  %al"
             )
-        | AST.BinOp (binop, t1, t2) => raise Fail "todo"
+        | AST.BinOp (binop, e1, e2) =>
+          (case binop
+            of AST.Plus =>
+              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^ 
+            "\tpop %rcx\n" ^ "\taddl %rcx, %rax\n"
+            | AST.Minus => 
+              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^
+            "\tpop %rcx\n" ^ "\tsubl %rax, %rcx\n" ^ "\tmovq %rcx, %rax\n"
+            | AST.Times =>
+              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^ 
+            "\tpop %rcx\n" ^ "\timul %rcx, %rax\n"
+            | AST.Div =>
+              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^
+              "\tpop %rcx\n" ^ "\tpush %rax\n" ^ "\tmovq %rcx, %rax\n"
+              ^ "\tpop %rcx\n" ^ "\tidivl %rcx"
+          )
     )
   fun genStatement (b : AST.statement) : string =
     (case b

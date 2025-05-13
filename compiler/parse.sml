@@ -21,115 +21,61 @@ structure Parse = struct
             | _ => raise Fail "Parse error, unable to find function declaration"
 
         )
-(*      and nextExpHelper (tlist : T.token list) :
+      and nextExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
-        let
-          val term_w_toks = nextTerm(tlist)
-        in
-          (case term_w_toks
-             of (term, T.Plus :: rest) =>
-                let
-                  val next_term_w_toks = nextExpHelper rest
-                in
-                  (case next_term_w_toks
-                    of (next_term, new_toks) =>
-                      (AST.BinOp (AST.Plus, term, next_term), new_toks)
-                  )
-                end
-              | (term, T.Minus :: rest) =>
-                let
-                  val next_term_w_toks = nextExpHelper rest
-                in
-                  (case next_term_w_toks
-                    of (next_term, new_toks) =>
-                      (AST.BinOp (AST.Minus, term, next_term), new_toks)
-                  )
-                end
-              | (term, rest) => (term, rest)
-           )
-         end*)
+        (case term_w_tlist
+          of (term, T.Plus :: rest) =>
+            let
+              val next_term = nextTerm rest
+            in
+              (case next_term
+                of (nterm, ntoks) =>
+                  nextExpHelper ((AST.BinOp (AST.Plus, term, nterm)), ntoks)
+              )
+            end
+           | (term, T.Minus :: rest) =>
+            let
+              val next_term = nextTerm rest
+            in
+            (case next_term
+                of (nterm, ntoks) =>
+                  nextExpHelper ((AST.BinOp (AST.Minus, term, nterm)), ntoks)
+            )
+            end
+           | _ => term_w_tlist
+        )
       and nextExp (tlist : Token.token list) :
         AST.exp * toklist =
-        let
-          val term_w_toks = nextTerm(tlist)
-        in
-          (case term_w_toks
-            of (term, T.Plus :: rest) =>
-              let
-                val next_term_w_toks = nextExp rest
-              in
-                (case next_term_w_toks
-                   of (next_term, new_toks) =>
-                    (AST.BinOp (AST.Plus, term, next_term), new_toks)
-                )
-              end
-              | (term, T.Minus :: rest) =>
-              let
-                val next_term_w_toks = nextExp rest
-              in
-                (case next_term_w_toks
-                   of (next_term, new_toks) =>
-                    (AST.BinOp (AST.Minus, term, next_term), new_toks)
-                )
-              end
-              | (term, rest) => (term, rest)
-            )
-        end
-(*      and nextTermHelper (tlist : Token.token list) :
+        nextExpHelper (nextTerm (tlist))
+
+          
+      and nextTermHelper (factor_w_tlist :  AST.exp * toklist) :
            (AST.exp * toklist) =
-        let
-          val factor_w_toks = nextFactor(tlist)
-        in
-          (case factor_w_toks
-             of (factor, T.Times :: rest) =>
-                let
-                  val next_factor_w_toks = nextTermHelper rest
-                in
-                  (case next_factor_w_toks
-                    of (next_factor, new_toks) =>
-                      (AST.BinOp (AST.Times, factor, next_factor), new_toks)
-                  )
-                end
-              | (factor, T.Div :: rest) =>
-                let
-                  val next_factor_w_toks = nextTermHelper rest
-                in
-                  (case next_factor_w_toks
-                    of (next_factor, new_toks) =>
-                      (AST.BinOp (AST.Div, factor, next_factor), new_toks)
-                  )
-                end
-              | (factor, rest) => (factor, rest)
-           )
-         end
-         *)
+        (case factor_w_tlist
+          of (factor, T.Times :: rest) =>
+            let
+              val next_factor = nextFactor rest
+            in
+              (case next_factor
+                of (nfactor, ntoks) =>
+                  nextTermHelper ((AST.BinOp (AST.Times, factor, nfactor)), ntoks)
+              )
+            end
+           | (factor, T.Div :: rest) =>
+            let
+              val next_factor = nextFactor rest
+            in
+            (case next_factor
+                of (nfactor, ntoks) =>
+                  nextTermHelper ((AST.BinOp (AST.Div, factor, nfactor)), ntoks)
+            )
+            end
+           | _ => factor_w_tlist
+        )
       and nextTerm (tlist : Token.token list):
            (AST.exp * toklist) =
-        let
-          val factor_w_toks = nextFactor(tlist)
-        in
-          (case factor_w_toks
-            of (factor, T.Times :: rest) =>
-              let
-                val next_factor_w_toks = nextTerm rest
-              in
-                (case next_factor_w_toks
-                   of (next_factor, new_toks) =>
-                    (AST.BinOp (AST.Times, factor, next_factor), new_toks)
-                )
-              end
-              | (factor, T.Div :: rest) =>
-              let
-                val next_factor_w_toks = nextTerm rest
-              in
-                (case next_factor_w_toks
-                   of (next_factor, new_toks) =>
-                    (AST.BinOp (AST.Div, factor, next_factor), new_toks)
-                )
-              end
-              | (factor, rest) => (factor, rest)
-            )
-        end
+         nextTermHelper (nextFactor (tlist))
+         
       and nextFactor(tlist : Token.token list) :
             (AST.exp * toklist) =
             (case tlist
@@ -200,4 +146,3 @@ structure Parse = struct
     end
 
 end
-
