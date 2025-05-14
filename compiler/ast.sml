@@ -9,6 +9,14 @@ structure AST = struct
   | Plus
   | Times
   | Div
+  | AND
+  | OR
+  | Eq
+  | Neq
+  | Leq
+  | Lt
+  | Gt
+  | Geq
 
   datatype exp
   = Const of int
@@ -33,5 +41,13 @@ structure AST = struct
         | Plus => "+"
         | Times => "*"
         | Div => "/"
+        | AND => "&&"
+        | OR => "||"
+        | Leq => "<="
+        | Lt => "<"
+        | Gt => ">"
+        | Geq => ">="
+        | Eq => "=="
+        | Neq => "!="
     )
 end

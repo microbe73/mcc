@@ -1,6 +1,5 @@
-.globl	_main                           ## -- Begin function main
+	.globl	_main                           ## -- Begin function main
 _main:                                  ## @main
-## %bb.0:
-    movl	$2, %eax
-    retq
+	movl	$17, %eax
+	retq
                                         ## -- End function

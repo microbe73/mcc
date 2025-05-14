@@ -1,0 +1,31 @@
+1: (), [], . (struct), ->
+
+2: ++,-- (postfix)
+
+3: ++,-- (prefix), -(negation), !(logical not), ~ (complement), */& (pointer), sizeof
+
+4: * (times), / (div), % (mod)
+
+5: +,- (addition/subtraction)
+
+6: <<, >> (bitshift)
+
+7: <, <=, >=, > (comparision)
+
+8: ==, !=
+
+9: & (bitwise AND)
+
+10: ^ (bitwise XOR)
+
+11: | (bitwise OR)
+
+12: && (logical AND)
+
+13: || (logical OR)
+
+14: ?: (ternary)
+
+15: =, +=, ...= (all the assignment stuff except ++/--)
+
+16: ,

@@ -1,8 +1,18 @@
 structure Generate = struct
+  val count = ref 0
+  fun incr (a : unit) : int =
+    let val _ = count := !count + 1 in !count end
 
+  fun new_label (a : unit) : string =
+  let
+    val _ = count := !count + 1
+  in
+    "_label" ^ Int.toString (!count)
+  end
+      
   fun genExp (exp : AST.exp ) : string =
     (case exp
-       of AST.Const n => "\tmovl $" ^ Int.toString n ^ ", %rax\n"
+       of AST.Const n => "\tmovq $" ^ Int.toString n ^ ", %rax\n"
         | AST.UnOp (unop, inner_exp) => 
             (case unop
                of AST.Negation =>
@@ -11,23 +21,23 @@ structure Generate = struct
                   genExp inner_exp ^ "\tnot  %rax\n"
                 | AST.Not =>
                     genExp inner_exp ^ "\tcmpl  $0, %rax\n" ^
-                    "\tmovl  $0, %rax\n" ^ "\tsete  %al"
+                    "\tmovq  $0, %rax\n" ^ "\tsete  %al"
             )
         | AST.BinOp (binop, e1, e2) =>
           (case binop
             of AST.Plus =>
-              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^ 
-            "\tpop %rcx\n" ^ "\taddl %rcx, %rax\n"
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^ 
+            "\tpopq %rcx\n" ^ "\tadd %rcx, %rax\n"
             | AST.Minus => 
-              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^
-            "\tpop %rcx\n" ^ "\tsubl %rax, %rcx\n" ^ "\tmovq %rcx, %rax\n"
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+            "\tpopq %rcx\n" ^ "\tsub %rax, %rcx\n" ^ "\tmovq %rcx, %rax\n"
             | AST.Times =>
-              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^ 
-            "\tpop %rcx\n" ^ "\timul %rcx, %rax\n"
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^ 
+            "\tpopq %rcx\n" ^ "\timul %rcx, %rax\n"
             | AST.Div =>
-              genExp e1 ^ "\tpush %rax\n" ^ genExp e2 ^
-              "\tpop %rcx\n" ^ "\tpush %rax\n" ^ "\tmovq %rcx, %rax\n"
-              ^ "\tpop %rcx\n" ^ "\tidivl %rcx"
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
+              ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n"
           )
     )
   fun genStatement (b : AST.statement) : string =
@@ -45,7 +55,8 @@ structure Generate = struct
         | (fnc :: rest) =>
           (case fnc
              of AST.Fun (name, body) =>
-                  "\t.globl _" ^ name ^ "\n" ^ genStatement body ^ generate rest
+                  "\t.globl _" ^ name ^ "\n" ^ "_" ^ name ^ ":\n" ^ 
+                  genStatement body ^ generate rest
           )
     )
   fun printExp (exp : AST.exp ) : string =

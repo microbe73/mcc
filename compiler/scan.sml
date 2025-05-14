@@ -14,23 +14,32 @@ structure Scan = struct
         let
         
         val regexes = [
-          ("{",             fn match => matched Token.OBrac match),
-          ("}",             fn match => matched Token.CBrac match),
-          (";",             fn match => matched Token.Semcol match),
-          ("\\(",           fn match => matched Token.OPar match),
-          ("\\)",           fn match => matched Token.CPar match),
-          ("int",           fn match => matched (Token.KW Token.Int) match),
-          ("return",        fn match => matched (Token.KW Token.Return) match),
-          ("!",             fn match => matched (Token.Not) match),
-          ("~",             fn match => matched (Token.Complement) match),
-          ("-",             fn match => matched (Token.Minus) match),
-          ("\\+",             fn match => matched (Token.Plus) match),
-          ("\\*",             fn match => matched (Token.Times) match),
-          ("/",             fn match => matched (Token.Div) match),
+          ("{",                   fn match => matched Token.OBrac match),
+          ("}",                   fn match => matched Token.CBrac match),
+          (";",                   fn match => matched Token.Semcol match),
+          ("\\(",                 fn match => matched Token.OPar match),
+          ("\\)",                 fn match => matched Token.CPar match),
+          ("int",                 fn match => matched (Token.KW Token.Int) match),
+          ("return",              fn match => matched (Token.KW Token.Return) match),
+          ("!",                   fn match => matched (Token.Not) match),
+          ("~",                   fn match => matched (Token.Complement) match),
+          ("-",                   fn match => matched (Token.Minus) match),
+          ("\\+",                 fn match => matched (Token.Plus) match),
+          ("\\*",                 fn match => matched (Token.Times) match),
+          ("/",                   fn match => matched (Token.Div) match),
+
+          ("&&",                  fn match => matched (Token.AND) match),
+          ("\\|\\|",              fn match => matched (Token.OR) match),
+          ("==",                  fn match => matched (Token.Eq) match),
+          ("<=",                  fn match => matched (Token.Leq) match),
+          ("<",                   fn match => matched (Token.Lt) match),
+          (">=",                  fn match => matched (Token.Geq) match),
+          (">",                   fn match => matched (Token.Gt) match),
+          ("!=",                  fn match => matched (Token.Neq) match),
           ("[a-zA-Z][a-zA-Z0-9]*",
-                            fn match => matched (Token.Identifier "") match ),
-          ("[0-9]+",        fn match => matched (Token.IntLiteral 0) match),
-          ("[ \t\n]+",      fn match => matched Token.WS match)
+                                  fn match => matched (Token.Identifier "") match ),
+          ("[0-9]+",              fn match => matched (Token.IntLiteral 0) match),
+          ("[ \t\n]+",            fn match => matched Token.WS match)
         ]
         val match_result = StringCvt.scanString (RE.match regexes) s
         (* {len : int, pos : StringCvt.cs } MatchTree.match_tree *)

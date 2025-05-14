@@ -19,6 +19,13 @@ structure Token = struct
   | Plus
   | Times
   | Div
-
+  | AND
+  | OR
+  | Eq
+  | Neq
+  | Lt
+  | Leq
+  | Geq
+  | Gt
 end
   
