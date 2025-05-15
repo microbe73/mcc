@@ -38,6 +38,7 @@ structure Generate = struct
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
               "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
               ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n"
+            | AST.AND => raise Fail "todo"
           )
     )
   fun genStatement (b : AST.statement) : string =
