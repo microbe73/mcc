@@ -27,5 +27,8 @@ structure Token = struct
   | Leq
   | Geq
   | Gt
+  | BAnd
+  | BXor
+  | BOr
 end
   

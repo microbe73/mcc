@@ -35,20 +35,114 @@ structure Parse = struct
               )
             end
         )
-
+(*Assignment/Assignment operators like +=*)
       and nextExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
-          of (term, T.Plus :: rest) =>
-            nextGenExp (term, rest, nextTerm, AST.Plus, nextExpHelper)
-           | (term, T.Minus :: rest) =>
-            nextGenExp (term, rest, nextTerm, AST.Minus, nextExpHelper)
+          of (term, T.OR :: rest) =>
+            nextGenExp (term, rest, nextLAExp, AST.OR, nextExpHelper)
            | _ => term_w_tlist
         )
 
       and nextExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextExpHelper (nextTerm (tlist))
+        nextExpHelper (nextLAExp (tlist))
+
+      and nextLAExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.AND :: rest) =>
+            nextGenExp (term, rest, nextEQExp, AST.AND, nextLAExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextLAExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextLAExpHelper (nextBORExp (tlist))
+
+      
+      and nextBORExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.BOr :: rest) =>
+            nextGenExp (term, rest, nextBXORExp, AST.BOr, nextBORExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextBORExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextBORExpHelper (nextBXORExp (tlist))
+
+      
+      and nextBXORExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.BXor :: rest) =>
+            nextGenExp (term, rest, nextBANDExp, AST.BXor, nextBXORExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextBXORExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextBXORExpHelper (nextBANDExp (tlist))
+      
+      and nextBANDExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.BAnd :: rest) =>
+            nextGenExp (term, rest, nextEQExp, AST.BAnd, nextBANDExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextBANDExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextBANDExpHelper (nextEQExp (tlist))
+      
+      and nextEQExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.Eq :: rest) =>
+            nextGenExp (term, rest, nextRELExp, AST.Eq, nextEQExpHelper)
+           | (term, T.Neq :: rest) =>
+            nextGenExp (term, rest, nextRELExp, AST.Neq, nextEQExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextEQExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextEQExpHelper (nextRELExp (tlist))
+      
+      and nextRELExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.Lt :: rest) =>
+            nextGenExp (term, rest, nextAExp, AST.Lt, nextRELExpHelper)
+           | (term, T.Leq :: rest) =>
+            nextGenExp (term, rest, nextAExp, AST.Leq, nextRELExpHelper)
+           | (term, T.Geq :: rest) =>
+            nextGenExp (term, rest, nextAExp, AST.Geq, nextRELExpHelper)
+           | (term, T.Gt :: rest) =>
+            nextGenExp (term, rest, nextAExp, AST.Gt, nextRELExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextRELExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextRELExpHelper (nextAExp (tlist))
+(*BitShifts *)
+      and nextAExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.Plus :: rest) =>
+            nextGenExp (term, rest, nextTerm, AST.Plus, nextAExpHelper)
+           | (term, T.Minus :: rest) =>
+            nextGenExp (term, rest, nextTerm, AST.Minus, nextAExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextAExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextAExpHelper (nextTerm (tlist))
           
       and nextTermHelper (factor_w_tlist :  AST.exp * toklist) :
            (AST.exp * toklist) =

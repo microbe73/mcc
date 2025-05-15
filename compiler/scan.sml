@@ -35,9 +35,12 @@ structure Scan = struct
           ("<",                   fn match => matched (Token.Lt) match),
           (">=",                  fn match => matched (Token.Geq) match),
           (">",                   fn match => matched (Token.Gt) match),
-          ("!=",                  fn match => matched (Token.Neq) match),
+          ("!=",                  fn match => matched (Token.Neq) match),                        
           ("[a-zA-Z][a-zA-Z0-9]*",
-                                  fn match => matched (Token.Identifier "") match ),
+                                  fn match => matched (Token.Identifier "") match ),                        
+          ("&",                   fn match => matched (Token.BAnd) match),
+          ("\\|",                 fn match => matched (Token.BOr) match),
+          ("^",                   fn match => matched (Token.BXor) match),
           ("[0-9]+",              fn match => matched (Token.IntLiteral 0) match),
           ("[ \t\n]+",            fn match => matched Token.WS match)
         ]

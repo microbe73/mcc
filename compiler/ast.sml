@@ -17,6 +17,9 @@ structure AST = struct
   | Lt
   | Gt
   | Geq
+  | BAnd
+  | BXor
+  | BOr
 
   datatype exp
   = Const of int
