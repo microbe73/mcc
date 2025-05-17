@@ -39,6 +39,37 @@ structure Generate = struct
               "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
               ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n"
             | AST.AND => raise Fail "todo"
+            | AST.OR => raise Fail "todo"
+            | AST.Eq =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              ^ "\tsete %al\n"
+            | AST.Neq =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              ^ "\tsetne %al\n"
+            | AST.Leq =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              ^ "\tsetle %al\n"
+            | AST.Geq =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              ^ "\tsetge %al\n"
+            | AST.Gt =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              ^ "\tsetg %al\n"
+            | AST.Lt =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              ^ "\tsetl %al\n"
+            | AST.BAnd => raise Fail "todo"
+            | AST.BOr => raise Fail "todo"
+            | AST.BXor => raise Fail "todo"
+            | AST.BLeft => raise Fail "todo"
+            | AST.BRight => raise Fail "todo"
+            | AST.Mod => raise Fail "todo"
           )
     )
   fun genStatement (b : AST.statement) : string =

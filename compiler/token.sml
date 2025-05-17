@@ -30,5 +30,8 @@ structure Token = struct
   | BAnd
   | BXor
   | BOr
+  | BRight
+  | BLeft
+  | Mod
 end
   

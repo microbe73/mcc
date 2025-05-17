@@ -20,6 +20,9 @@ structure AST = struct
   | BAnd
   | BXor
   | BOr
+  | BLeft
+  | BRight
+  | Mod
 
   datatype exp
   = Const of int

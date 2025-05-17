@@ -116,20 +116,34 @@ structure Parse = struct
         AST.exp * (toklist) =
         (case term_w_tlist
           of (term, T.Lt :: rest) =>
-            nextGenExp (term, rest, nextAExp, AST.Lt, nextRELExpHelper)
+            nextGenExp (term, rest, nextBSExp, AST.Lt, nextRELExpHelper)
            | (term, T.Leq :: rest) =>
-            nextGenExp (term, rest, nextAExp, AST.Leq, nextRELExpHelper)
+            nextGenExp (term, rest, nextBSExp, AST.Leq, nextRELExpHelper)
            | (term, T.Geq :: rest) =>
-            nextGenExp (term, rest, nextAExp, AST.Geq, nextRELExpHelper)
+            nextGenExp (term, rest, nextBSExp, AST.Geq, nextRELExpHelper)
            | (term, T.Gt :: rest) =>
-            nextGenExp (term, rest, nextAExp, AST.Gt, nextRELExpHelper)
+            nextGenExp (term, rest, nextBSExp, AST.Gt, nextRELExpHelper)
            | _ => term_w_tlist
         )
 
       and nextRELExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextRELExpHelper (nextAExp (tlist))
-(*BitShifts *)
+        nextRELExpHelper (nextBSExp (tlist))
+      
+      and nextBSExpHelper (term_w_tlist : AST.exp * toklist) :
+        AST.exp * (toklist) =
+        (case term_w_tlist
+          of (term, T.BLeft :: rest) =>
+            nextGenExp (term, rest, nextAExp, AST.BLeft, nextBSExpHelper)
+           | (term, T.BRight:: rest) =>
+            nextGenExp (term, rest, nextAExp, AST.BRight, nextBSExpHelper)
+           | _ => term_w_tlist
+        )
+
+      and nextBSExp (tlist : Token.token list) :
+        AST.exp * toklist =
+        nextBSExpHelper (nextAExp (tlist))
+
       and nextAExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -151,6 +165,8 @@ structure Parse = struct
             nextGenExp (factor, rest, nextFactor, AST.Times, nextTermHelper)
            | (factor, T.Div :: rest) =>
             nextGenExp (factor, rest, nextFactor, AST.Div, nextTermHelper)
+           | (factor, T.Mod :: rest) =>
+            nextGenExp (factor, rest, nextFactor, AST.Mod, nextTermHelper)
            | _ => factor_w_tlist
         )
 
@@ -208,7 +224,7 @@ structure Parse = struct
                   (case exp_w_toks
                      of (exp, (T.Semcol :: toks)) =>
                           (AST.Return (exp), toks)
-                      | _ => raise Fail "Parse error, closing ; missing"
+                      | _ => raise Fail "Parse error, ending ; missing"
                   )
                 end
             | _ => raise Fail "todo"
