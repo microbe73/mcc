@@ -20,7 +20,7 @@ structure Generate = struct
                 | AST.Complement =>
                   genExp inner_exp ^ "\tnot  %rax\n"
                 | AST.Not =>
-                    genExp inner_exp ^ "\tcmpl  $0, %rax\n" ^
+                    genExp inner_exp ^ "\tcmpq  $0, %rax\n" ^
                     "\tmovq  $0, %rax\n" ^ "\tsete  %al"
             )
         | AST.BinOp (binop, e1, e2) =>
@@ -48,12 +48,12 @@ structure Generate = struct
                "    je " ^ clause2 ^ "\n" ^
                "    movq $1, %rax\n" ^ 
                "    jmp " ^ end_label ^ "\n" ^
-               clause2 ^ "\n" ^
+               clause2 ^ ":\n" ^
                genExp e2 ^ 
                "    cmpq $0, %rax\n" ^
                "    movq $0, %rax\n" ^
                "    setne %al\n" ^
-               end_label
+               end_label ^ ":\n"
               end
             | AST.AND => 
               let
@@ -64,35 +64,36 @@ structure Generate = struct
                "    cmpq $0, %rax\n" ^
                "    jne " ^ clause2 ^ "\n" ^
                "    jmp " ^ end_label ^ "\n" ^
+               clause2 ^ ":\n" ^
                genExp e2 ^
                "    cmpq $0, %rax\n" ^
                "    movq $0, %rax\n" ^
                "    setne %al\n" ^
-               end_label
+               end_label ^ ":\n"
               end
             | AST.Eq =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
-              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsete %al\n"
             | AST.Neq =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
-              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsetne %al\n"
             | AST.Leq =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
-              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsetle %al\n"
             | AST.Geq =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
-              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsetge %al\n"
             | AST.Gt =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
-              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsetg %al\n"
             | AST.Lt =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
-              "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+              "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsetl %al\n"
             | AST.BAnd => 
              genExp e1 ^
@@ -117,12 +118,14 @@ structure Generate = struct
              "    pushq %rax\n" ^
              genExp e2 ^
              "    movq %rax, %rcx\n" ^
+             "    popq %rax\n" ^
              "    shlq %cl, %rax\n"
             | AST.BRight =>
              genExp e1 ^
              "    pushq %rax\n" ^
              genExp e2 ^
              "    movq %rax, %rcx\n" ^
+             "    popq %rax\n" ^
              "    shrq %cl, %rax\n"
             | AST.Mod =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
@@ -147,7 +150,7 @@ structure Generate = struct
           (case fnc
              of AST.Fun (name, body) =>
                   "\t.globl _" ^ name ^ "\n" ^ "_" ^ name ^ ":\n" ^ 
-                  genStatement body ^ generate rest
+                  genBody body ^ generate rest
           )
     )
   fun printExp (exp : AST.exp ) : string =
@@ -159,7 +162,7 @@ structure Generate = struct
             "(" ^ printExp exp1 ^ " " ^ AST.binop_str binop ^ " " ^ printExp
             exp2 ^ ")"
     )
-
+(*
   fun printAST (t : AST.func ) : string =
     (case t
        of AST.Fun (name, statement) =>
@@ -168,4 +171,5 @@ structure Generate = struct
                     "Fun " ^ name ^ " Return " ^ printExp exp
             )
     )
+*)
 end

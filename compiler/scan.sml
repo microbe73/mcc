@@ -43,7 +43,7 @@ structure Scan = struct
                                   fn match => matched (Token.Identifier "") match ),                        
           ("&",                   fn match => matched (Token.BAnd) match),
           ("\\|",                 fn match => matched (Token.BOr) match),
-          ("^",                   fn match => matched (Token.BXor) match),
+          ("\\^",                   fn match => matched (Token.BXor) match),
           ("[0-9]+",              fn match => matched (Token.IntLiteral 0) match),
           ("[ \t\n]+",            fn match => matched Token.WS match)
         ]

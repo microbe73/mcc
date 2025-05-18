@@ -13,7 +13,7 @@ _main:                                  ## @main
 	movl	%eax, -8(%rbp)
 	movl	-8(%rbp), %ecx
 	subl	$60, %ecx
-	movl	$15, %eax
+	movl	$32, %eax
                                         ## kill: def $cl killed $ecx
 	shll	%cl, %eax
 	movl	%eax, -12(%rbp)

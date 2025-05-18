@@ -11,12 +11,11 @@ structure Parse = struct
            of T.KW (T.Int) :: T.Identifier fname :: T.OPar :: T.CPar :: T.OBrac ::
            rest =>
                    let
-                     val next = nextStatement rest
+                     val next = nextStatementBlock rest
                    in
                      (case next
-                        of (statement, (T.CBrac :: toks)) =>
-                             (AST.Fun (fname, statement), toks)
-                               | _ => raise Fail "Parse error, closing } missing"
+                        of (statements, toks) => 
+                        (AST.Fun (fname, statements), toks)
                      )
                    end
             | _ => raise Fail "Parse error, unable to find function declaration"
@@ -52,7 +51,7 @@ structure Parse = struct
         AST.exp * (toklist) =
         (case term_w_tlist
           of (term, T.AND :: rest) =>
-            nextGenExp (term, rest, nextEQExp, AST.AND, nextLAExpHelper)
+            nextGenExp (term, rest, nextBORExp, AST.AND, nextLAExpHelper)
            | _ => term_w_tlist
         )
 
@@ -229,6 +228,26 @@ structure Parse = struct
                 end
             | _ => raise Fail "todo"
         )
+      and nextStatementBlockHelper (sts_w_tlist : AST.statement list * toklist) :
+        (AST.statement list * toklist) =
+        (case sts_w_tlist
+          of (statements, tlist) =>
+            let
+              val statement_w_toks = nextStatement tlist
+            in
+              (case statement_w_toks
+                of (statement, new_toks) =>
+                  (case new_toks
+                    of (T.CBrac :: rest) => (statement :: statements, rest)
+                    | _ => nextStatementBlockHelper (statement :: statements,
+                                                    new_toks)
+                  )
+              )
+            end
+        )
+      and nextStatementBlock (tlist : Token.token list) :
+        (AST.statement list * toklist) =
+        nextStatementBlockHelper ([], tlist)
     in
       (case tlist
         of [] => []

@@ -28,10 +28,16 @@ structure AST = struct
   = Const of int
   | UnOp of un_operator * exp
   | BinOp of bin_operator * exp * exp
+  
+  datatype typ
+  = Int
 
-  datatype statement = Return of exp
+  datatype statement
+    = Return of exp
+    | Declare of typ * string * (exp option)
+    | Exp of exp
 
-  datatype func = Fun of string * statement
+  datatype func = Fun of string * (statement list)
 
   datatype prog = Prog of func list
 
