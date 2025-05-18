@@ -6,10 +6,19 @@ _main:                                  ## @main
 ## %bb.0:
 	pushq	%rbp
 	movq	%rsp, %rbp
+	subq	$16, %rsp
 	movl	$0, -4(%rbp)
-  movq  $2, %rcx
-  movq	$125, %rax                    ## imm = 0x2B80
-  shrq  %cl, %rax
+	movb	$0, %al
+	callq	_getchar
+	movl	%eax, -8(%rbp)
+	movl	-8(%rbp), %ecx
+	subl	$60, %ecx
+	movl	$15, %eax
+                                        ## kill: def $cl killed $ecx
+	shll	%cl, %eax
+	movl	%eax, -12(%rbp)
+	movl	-12(%rbp), %eax
+	addq	$16, %rsp
 	popq	%rbp
 	retq
                                         ## -- End function

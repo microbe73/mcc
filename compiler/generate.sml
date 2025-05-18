@@ -38,8 +38,38 @@ structure Generate = struct
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
               "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
               ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n"
-            | AST.AND => raise Fail "todo"
-            | AST.OR => raise Fail "todo"
+            | AST.OR =>
+              let
+                val clause2 = new_label()
+                val end_label = new_label()
+              in
+               genExp e1 ^ 
+               "    cmpq $0, %rax\n" ^ 
+               "    je " ^ clause2 ^ "\n" ^
+               "    movq $1, %rax\n" ^ 
+               "    jmp " ^ end_label ^ "\n" ^
+               clause2 ^ "\n" ^
+               genExp e2 ^ 
+               "    cmpq $0, %rax\n" ^
+               "    movq $0, %rax\n" ^
+               "    setne %al\n" ^
+               end_label
+              end
+            | AST.AND => 
+              let
+                val clause2 = new_label()
+                val end_label = new_label()
+              in
+               genExp e1 ^
+               "    cmpq $0, %rax\n" ^
+               "    jne " ^ clause2 ^ "\n" ^
+               "    jmp " ^ end_label ^ "\n" ^
+               genExp e2 ^
+               "    cmpq $0, %rax\n" ^
+               "    movq $0, %rax\n" ^
+               "    setne %al\n" ^
+               end_label
+              end
             | AST.Eq =>
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
               "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
@@ -64,12 +94,41 @@ structure Generate = struct
               genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
               "\tpopq %rcx\n" ^ "\tcmpl %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
               ^ "\tsetl %al\n"
-            | AST.BAnd => raise Fail "todo"
-            | AST.BOr => raise Fail "todo"
-            | AST.BXor => raise Fail "todo"
-            | AST.BLeft => raise Fail "todo"
-            | AST.BRight => raise Fail "todo"
-            | AST.Mod => raise Fail "todo"
+            | AST.BAnd => 
+             genExp e1 ^
+             "    pushq %rax\n" ^
+             genExp e2 ^
+             "    popq %rcx\n" ^
+             "    and %rcx, %rax\n"
+            | AST.BOr => 
+             genExp e1 ^
+             "    pushq %rax\n" ^
+             genExp e2 ^
+             "    popq %rcx\n" ^
+             "    or %rcx, %rax\n"
+            | AST.BXor =>
+             genExp e1 ^
+             "    pushq %rax\n" ^
+             genExp e2 ^
+             "    popq %rcx\n" ^
+             "    xor %rcx, %rax\n"
+            | AST.BLeft =>
+             genExp e1 ^
+             "    pushq %rax\n" ^
+             genExp e2 ^
+             "    movq %rax, %rcx\n" ^
+             "    shlq %cl, %rax\n"
+            | AST.BRight =>
+             genExp e1 ^
+             "    pushq %rax\n" ^
+             genExp e2 ^
+             "    movq %rax, %rcx\n" ^
+             "    shrq %cl, %rax\n"
+            | AST.Mod =>
+              genExp e1 ^ "\tpushq %rax\n" ^ genExp e2 ^
+              "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
+              ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n" ^ 
+              "\tmovq %rdx, %rax\n"
           )
     )
   fun genStatement (b : AST.statement) : string =

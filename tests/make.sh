@@ -1,2 +1,2 @@
 #!/bin/bash
-gcc -S -O3 -fno-asynchronous-unwind-tables $1
+gcc -S -O0 -fno-asynchronous-unwind-tables $1
