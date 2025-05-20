@@ -34,18 +34,30 @@ structure Parse = struct
               )
             end
         )
+      and nextExp (tlist : toklist) : AST.exp * toklist =
+        (case tlist
+          of T.Identifier s :: T.Asgn :: rest =>
+            let
+              val next_w_toks = nextExp rest
+            in
+              (case next_w_toks
+                of (next, toks) => (AST.Assign (s, next), toks)
+              )
+            end
+           | _ => nextLOExp tlist
+        )
 (*Assignment/Assignment operators like +=*)
-      and nextExpHelper (term_w_tlist : AST.exp * toklist) :
+      and nextLOExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
           of (term, T.OR :: rest) =>
-            nextGenExp (term, rest, nextLAExp, AST.OR, nextExpHelper)
+            nextGenExp (term, rest, nextLAExp, AST.OR, nextLOExpHelper)
            | _ => term_w_tlist
         )
 
-      and nextExp (tlist : Token.token list) :
+      and nextLOExp (tlist : toklist) :
         AST.exp * toklist =
-        nextExpHelper (nextLAExp (tlist))
+        nextLOExpHelper (nextLAExp (tlist))
 
       and nextLAExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
@@ -211,22 +223,56 @@ structure Parse = struct
                     )
                   end
                 | (T.IntLiteral num :: rest) => (AST.Const num, rest)
+                | (T.Identifier s :: rest) => (AST.Var s, rest)
                 | _ => raise Fail "Parse error, could not parse factor"
              )
       and nextStatement (tlist : Token.token list) :
         (AST.statement * toklist) =
         (case tlist
-           of T.KW Return :: rest =>
-                let
-                  val exp_w_toks = nextExp rest
-                in
-                  (case exp_w_toks
-                     of (exp, (T.Semcol :: toks)) =>
-                          (AST.Return (exp), toks)
-                      | _ => raise Fail "Parse error, ending ; missing"
+           of (T.KW k) :: rest =>
+              (case k
+                of T.Return =>
+                  let
+                    val exp_w_toks = nextExp rest
+                  in
+                    (case exp_w_toks
+                       of (exp, (T.Semcol :: toks)) =>
+                            (AST.Return (exp), toks)
+                        | _ => raise Fail "Parse error on return, ending ; missing"
+                    )
+                 end
+                  | T.Int =>
+                  (case rest
+                    of T.Identifier s :: rest' =>
+                      (case rest'
+                        of T.Semcol :: rest2 => 
+                            (AST.Declare (AST.Int, s, NONE), rest2)
+                         | T.Asgn :: rest2 => 
+                            let
+                              val exp_w_toks = nextExp rest2
+                            in
+                              (case exp_w_toks
+                                of (exp, (T.Semcol :: toks)) =>
+                                  ((AST.Declare (AST.Int, s, SOME exp)), toks)
+                                  | _ => raise Fail "Parse error, ending ; missing"
+                              )
+                            end
+                          | _ => raise Fail 
+                          "Parse error, variable declaration invalid"
+                      )
+                      | _ => raise Fail "Dangling int keyword"
                   )
-                end
-            | _ => raise Fail "todo"
+              )
+            | _ =>
+              let
+                val exp_w_toks = nextExp tlist
+              in
+                (case exp_w_toks
+                  of (exp, (T.Semcol :: toks)) =>
+                    (AST.Exp exp, toks)
+                   | _ => raise Fail "Parse error, ending ; missing"
+                )
+              end
         )
       and nextStatementBlockHelper (sts_w_tlist : AST.statement list * toklist) :
         (AST.statement list * toklist) =
@@ -238,8 +284,8 @@ structure Parse = struct
               (case statement_w_toks
                 of (statement, new_toks) =>
                   (case new_toks
-                    of (T.CBrac :: rest) => (statement :: statements, rest)
-                    | _ => nextStatementBlockHelper (statement :: statements,
+                    of (T.CBrac :: rest) => ((statements @ [statement]), rest)
+                    | _ => nextStatementBlockHelper (statements @ [statement],
                                                     new_toks)
                   )
               )

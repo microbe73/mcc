@@ -24,13 +24,16 @@ structure AST = struct
   | BRight
   | Mod
 
+  datatype typ
+  = Int
+
   datatype exp
   = Const of int
   | UnOp of un_operator * exp
   | BinOp of bin_operator * exp * exp
+  | Assign of string * exp
+  | Var of string
   
-  datatype typ
-  = Int
 
   datatype statement
     = Return of exp

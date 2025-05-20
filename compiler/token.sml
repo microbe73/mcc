@@ -33,5 +33,6 @@ structure Token = struct
   | BRight
   | BLeft
   | Mod
+  | Asgn
 end
   

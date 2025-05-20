@@ -21,7 +21,7 @@ structure Generate = struct
                   genExp inner_exp ^ "\tnot  %rax\n"
                 | AST.Not =>
                     genExp inner_exp ^ "\tcmpq  $0, %rax\n" ^
-                    "\tmovq  $0, %rax\n" ^ "\tsete  %al"
+                    "\tmovq  $0, %rax\n" ^ "\tsete  %al\n"
             )
         | AST.BinOp (binop, e1, e2) =>
           (case binop
@@ -153,6 +153,7 @@ structure Generate = struct
                   genBody body ^ generate rest
           )
     )
+(*
   fun printExp (exp : AST.exp ) : string =
     (case exp
        of AST.Const n => Int.toString n
@@ -162,7 +163,7 @@ structure Generate = struct
             "(" ^ printExp exp1 ^ " " ^ AST.binop_str binop ^ " " ^ printExp
             exp2 ^ ")"
     )
-(*
+
   fun printAST (t : AST.func ) : string =
     (case t
        of AST.Fun (name, statement) =>
