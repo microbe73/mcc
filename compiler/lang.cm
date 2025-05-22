@@ -5,6 +5,7 @@ Library
     structure Parse
     structure Generate
     structure Main
+    structure VarMap
 is
     $/basis.cm
     $/regexp-lib.cm
@@ -15,4 +16,5 @@ is
     parse.sml
     generate.sml
     main.sml
+    var-set.sml
 
