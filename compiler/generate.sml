@@ -21,7 +21,10 @@ structure Generate = struct
 
   (*TODO: refactor genExp not to take in a context but only a pmap, it can't
   update the offset since declarations are not expressions. This will also make
-  blocks easier I think and just in general *)
+  blocks easier I think and just in general. Also literally just need to return
+  a string no need to return a context since the genExp function doesn't update
+  it.
+  *)
       
   fun genExp (exp_w_context : AST.exp * context) : (string * context) =
     (case exp_w_context of (exp, init_ctxt) =>
