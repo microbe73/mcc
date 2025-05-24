@@ -19,9 +19,7 @@ structure Generate = struct
     "_label" ^ Int.toString (!count)
   end
 
-  (*TODO: refactor genExp not to take in a context but only a pmap, it can't
-  update the offset since declarations are not expressions. This will also make
-  blocks easier I think and just in general *)
+  
       
   fun genExp (exp_w_context : AST.exp * VM.pmap) : string =
     (case exp_w_context of (exp, ctxt) =>
@@ -140,9 +138,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
@@ -152,9 +147,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
@@ -164,9 +156,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
@@ -176,9 +165,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
@@ -188,9 +174,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
@@ -200,9 +183,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
                exp1 ^
                "    pushq %rax\n" ^
@@ -214,9 +194,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
                exp1 ^
                "    pushq %rax\n" ^
@@ -228,9 +205,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^
                "    pushq %rax\n" ^
@@ -242,9 +216,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^
                "    pushq %rax\n" ^
@@ -257,9 +228,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^
                "    pushq %rax\n" ^
@@ -272,9 +240,6 @@ structure Generate = struct
               let
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
-                (* val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2) *)
               in
               exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
