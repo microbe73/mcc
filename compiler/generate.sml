@@ -23,379 +23,329 @@ structure Generate = struct
   update the offset since declarations are not expressions. This will also make
   blocks easier I think and just in general *)
       
-  fun genExp (exp_w_context : AST.exp * context) : (string * context) =
-    (case exp_w_context of (exp, init_ctxt) =>
+  fun genExp (exp_w_context : AST.exp * VM.pmap) : string =
+    (case exp_w_context of (exp, ctxt) =>
       (case exp
-         of AST.Const n => ("\tmovq $" ^ Int.toString n ^ ", %rax\n", init_ctxt)
+         of AST.Const n => "\tmovq $" ^ Int.toString n ^ ", %rax\n"
           | AST.UnOp (unop, inner_exp) =>
               (case unop
                  of AST.Negation =>
-                    (case genExp (inner_exp, init_ctxt)
-                      of (new_exp, ctxt) =>
-                        (new_exp ^ "\tneg  %rax\n", ctxt)
+                    (case genExp (inner_exp, ctxt)
+                      of new_exp  =>
+                        new_exp ^ "\tneg  %rax\n" 
                     )
                   | AST.Complement =>
-                    (case genExp (inner_exp, init_ctxt)
-                      of (new_exp, ctxt) =>
-                        (new_exp ^ "\tnot  %rax\n", ctxt)
+                    (case genExp (inner_exp, ctxt)
+                      of new_exp  =>
+                        new_exp ^ "\tnot  %rax\n" 
                     )
                   | AST.Not =>
-                    (case genExp (inner_exp, init_ctxt)
-                      of (new_exp, ctxt) =>
-                        (new_exp ^ "\tcmpq  $0, %rax\n" ^
+                    (case genExp (inner_exp, ctxt)
+                      of new_exp  =>
+                        new_exp ^ "\tcmpq  $0, %rax\n" ^
                       "\tmovq  $0, %rax\n" ^ "\tsete  %al\n"
-                      , ctxt)
+                       
                     )
                )
           | AST.BinOp (binop, e1, e2) =>
             (case binop
               of AST.Plus =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
-              ( e1 ^ "\tpushq %rax\n" ^ e2 ^ 
-              "\tpopq %rcx\n" ^ "\tadd %rcx, %rax\n", ctxt)
+               exp1 ^ "\tpushq %rax\n" ^ exp2 ^ 
+              "\tpopq %rcx\n" ^ "\tadd %rcx, %rax\n" 
               end
               | AST.Minus =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
-              "\tpopq %rcx\n" ^ "\tsub %rax, %rcx\n" ^ "\tmovq %rcx, %rax\n", 
-              ctxt)
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
+              "\tpopq %rcx\n" ^ "\tsub %rax, %rcx\n" ^ "\tmovq %rcx, %rax\n"
               end
               | AST.Times =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^ 
-              "\tpopq %rcx\n" ^ "\timul %rcx, %rax\n", ctxt)
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^ 
+              "\tpopq %rcx\n" ^ "\timul %rcx, %rax\n" 
              end 
               | AST.Div =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
-                ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n", ctxt)
+                ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n" 
              end 
               | AST.OR =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
                 let
                   val clause2 = new_label()
                   val end_label = new_label()
                 in
                 
-                 (e1 ^ 
+                 exp1 ^ 
                  "    cmpq $0, %rax\n" ^ 
                  "    je " ^ clause2 ^ "\n" ^
                  "    movq $1, %rax\n" ^ 
                  "    jmp " ^ end_label ^ "\n" ^
                  clause2 ^ ":\n" ^
-                 e2 ^ 
+                 exp2 ^ 
                  "    cmpq $0, %rax\n" ^
                  "    movq $0, %rax\n" ^
                  "    setne %al\n" ^
-                 end_label ^ ":\n", ctxt)
+                 end_label ^ ":\n" 
                 end 
              end 
               | AST.AND =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
                 let
                   val clause2 = new_label()
                   val end_label = new_label()
                 in
-                (
-                 e1 ^
+                
+                 exp1 ^
                  "    cmpq $0, %rax\n" ^
                  "    jne " ^ clause2 ^ "\n" ^
                  "    jmp " ^ end_label ^ "\n" ^
                  clause2 ^ ":\n" ^
-                 e2 ^
+                 exp2 ^
                  "    cmpq $0, %rax\n" ^
                  "    movq $0, %rax\n" ^
                  "    setne %al\n" ^
-                 end_label ^ ":\n", ctxt)
+                 end_label ^ ":\n" 
                 end
              end 
               | AST.Eq =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
-                val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
-                ^ "\tsete %al\n", ctxt)
+                ^ "\tsete %al\n" 
              end 
               | AST.Neq =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
-                ^ "\tsetne %al\n", ctxt)
+                ^ "\tsetne %al\n" 
              end 
               | AST.Leq =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
-                ^ "\tsetle %al\n", ctxt)
+                ^ "\tsetle %al\n" 
              end 
               | AST.Geq =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
-                ^ "\tsetge %al\n", ctxt)
+                ^ "\tsetge %al\n" 
              end 
               | AST.Gt =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
-                ^ "\tsetg %al\n", ctxt)
+                ^ "\tsetg %al\n" 
              end 
               | AST.Lt =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
-                ^ "\tsetl %al\n", ctxt)
+                ^ "\tsetl %al\n" 
              end 
               | AST.BAnd =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (
-               e1 ^
+               exp1 ^
                "    pushq %rax\n" ^
-               e2 ^
+               exp2 ^
                "    popq %rcx\n" ^
-               "    and %rcx, %rax\n", ctxt)
+               "    and %rcx, %rax\n" 
              end 
               | AST.BOr =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (
-               e1 ^
+               exp1 ^
                "    pushq %rax\n" ^
-               e2 ^
+               exp2 ^
                "    popq %rcx\n" ^
-               "    or %rcx, %rax\n", ctxt)
+               "    or %rcx, %rax\n" 
              end 
               | AST.BXor =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^
+              exp1 ^
                "    pushq %rax\n" ^
-               e2 ^
+               exp2 ^
                "    popq %rcx\n" ^
-               "    xor %rcx, %rax\n", ctxt)
+               "    xor %rcx, %rax\n" 
              end 
               | AST.BLeft =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^
+              exp1 ^
                "    pushq %rax\n" ^
-               e2 ^
+               exp2 ^
                "    movq %rax, %rcx\n" ^
                "    popq %rax\n" ^
-               "    shlq %cl, %rax\n", ctxt)
+               "    shlq %cl, %rax\n" 
              end 
               | AST.BRight =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^
+              exp1 ^
                "    pushq %rax\n" ^
-               e2 ^
+               exp2 ^
                "    movq %rax, %rcx\n" ^
                "    popq %rax\n" ^
-               "    shrq %cl, %rax\n", ctxt)
+               "    shrq %cl, %rax\n" 
              end 
               | AST.Mod =>
               let
-                val exp_w_ctxt1 = genExp (e1, init_ctxt)
-                val ctxt1 = #2(exp_w_ctxt1)
-                val exp_w_ctxt2 = genExp (e2, ctxt1)
-                val e1 = #1(exp_w_ctxt1)
+                val exp1 = genExp (e1, ctxt)
+                val exp2 = genExp (e2, ctxt)
+                (* val e1 = #1(exp_w_ctxt1)
                 val e2 = #1(exp_w_ctxt2)
-                val ctxt = #2(exp_w_ctxt2)
+                val ctxt = #2(exp_w_ctxt2) *)
               in
-              (e1 ^ "\tpushq %rax\n" ^ e2 ^
+              exp1 ^ "\tpushq %rax\n" ^ exp2 ^
                 "\tpopq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
                 ^ "\tpopq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n" ^ 
-                "\tmovq %rdx, %rax\n", ctxt)
+                "\tmovq %rdx, %rax\n" 
               end
              )
         | AST.Var s =>
-          (case init_ctxt
-            of (vmap, offset) =>
-                let
-                  val voffset = VM.find (s, vmap)
-                in
-                 ("    movq " ^ Int.toString voffset ^ "(%rbp), %rax\n",
-                 init_ctxt)
-               end  
-          )
+          let
+            val voffset = VM.find (s, ctxt)
+          in
+            "    movq " ^ Int.toString voffset ^ "(%rbp), %rax\n"
+          end
        | AST.Assign (s, exp) =>
           let
-            val exp_w_newctxt = genExp (exp, init_ctxt)
+            val expstr = genExp (exp, ctxt)
+            val voffset = VM.find (s, ctxt)
           in
-            (case exp_w_newctxt
-              of (expstr, new_ctxt) =>
-                (case new_ctxt
-                  of (vmap, offset) =>
-                  let
-                    val voffset = VM.find (s, vmap)
-                  in
-                  (expstr ^ "    movq %rax, " ^ Int.toString voffset ^ "(%rbp)\n",
-                  new_ctxt)
-                  end
-                )
-            )
+            expstr ^
+            "    movq %rax, " ^ Int.toString voffset ^ "(%rbp)\n"
           end
      )
   )
   fun genStatement (b : AST.statement * context) : (string * context) =
     (case b
        of (AST.Return exp, ctxt) => 
-       let
-        val exp_w_ctxt = genExp (exp, ctxt)
-       in
-        (case exp_w_ctxt
-          of (new_exp, new_ctxt) =>
-            (new_exp ^
+        (case ctxt
+          of (pmap, offset) =>
+            let
+              val exp = genExp (exp, pmap)
+            in
+            (exp ^
              "    movq %rbp, %rsp\n" ^
              "    popq %rbp\n" ^
-             "    retq\n", new_ctxt)
+             "    retq\n", ctxt)
+           end
         )
-       end
-        | (AST.Declare (ty, name, opt_exp), ctxt) =>
-          let
-            val pmap = #1(ctxt)
-            val _ = if (VM.contains (name, pmap)) then
-                      raise Fail "duplicate declaration"
-                    else
-                      0
-            val offset = #2(ctxt) - 8
-          in
-            (case opt_exp
-              of (SOME exp) => 
-                let
-                  val exp_w_ctxt2 = genExp (exp, ctxt)
-                in
-                  (case exp_w_ctxt2
-                    of (exp_txt, ctxt2) => 
-                    let
-                      val new_ctxt = (VM.ins ((name, offset), #1(ctxt2)), offset)
-                    in
-                      (exp_txt ^
-                      "\tpushq %rax\n", new_ctxt)
-                    end
-                  )
-                end
-              | NONE =>
-                ("\tpushq $0\n", (VM.ins ((name, offset), pmap), offset))
+      | (AST.Declare (ty, name, opt_exp), ctxt) =>
+        let
+          val pmap = #1(ctxt)
+          val _ = if (VM.contains (name, pmap)) then
+                    raise Fail "duplicate declaration"
+                  else
+                    0
+          val offset = #2(ctxt) - 8
+        in
+          (case opt_exp
+            of (SOME exp) => 
+              (case ctxt
+                of (pmap, offset) =>
+                  let
+                    val new_exp = genExp (exp, pmap)
+                    val new_ctxt = (VM.ins ((name, offset), pmap), offset)
+                  in
+                    (new_exp ^
+                    "\tpushq %rax\n", new_ctxt)
+                  end
             )
+            | NONE =>
+              ("\tpushq $0\n", (VM.ins ((name, offset), pmap), offset))
+          )
+        end
+     | (AST.Exp exp, ctxt) =>
+      (case ctxt
+        of (pmap, offset) =>
+          let
+            val new_exp = genExp (exp, pmap)
+          in
+            (new_exp, ctxt)
           end
-       | (AST.Exp exp, ctxt) => genExp (exp, ctxt)
+      )
     )
   fun genBody (b : (AST.statement list) * context) : string =
     (case b
