@@ -34,5 +34,9 @@ structure Token = struct
   | BLeft
   | Mod
   | Asgn
+  | If
+  | Else
+  | Colon
+  | Question
 end
   

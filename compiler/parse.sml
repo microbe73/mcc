@@ -11,7 +11,7 @@ structure Parse = struct
            of T.KW (T.Int) :: T.Identifier fname :: T.OPar :: T.CPar :: T.OBrac ::
            rest =>
                    let
-                     val next = nextStatementBlock rest
+                     val next = nextBlockItemList rest
                    in
                      (case next
                         of (statements, toks) => 
@@ -241,27 +241,7 @@ structure Parse = struct
                         | _ => raise Fail "Parse error on return, ending ; missing"
                     )
                  end
-                  | T.Int =>
-                  (case rest
-                    of T.Identifier s :: rest' =>
-                      (case rest'
-                        of T.Semcol :: rest2 => 
-                            (AST.Declare (AST.Int, s, NONE), rest2)
-                         | T.Asgn :: rest2 => 
-                            let
-                              val exp_w_toks = nextExp rest2
-                            in
-                              (case exp_w_toks
-                                of (exp, (T.Semcol :: toks)) =>
-                                  ((AST.Declare (AST.Int, s, SOME exp)), toks)
-                                  | _ => raise Fail "Parse error, ending ; missing"
-                              )
-                            end
-                          | _ => raise Fail 
-                          "Parse error, variable declaration invalid"
-                      )
-                      | _ => raise Fail "Dangling int keyword"
-                  )
+                  | T.Int => raise Fail "Not a statement"
               )
             | _ =>
               let
@@ -274,26 +254,78 @@ structure Parse = struct
                 )
               end
         )
-      and nextStatementBlockHelper (sts_w_tlist : AST.statement list * toklist) :
-        (AST.statement list * toklist) =
+      and nextDeclaration (tlist : toklist) : AST.declaration * toklist =
+        (case tlist
+          of (T.KW k) :: rest =>
+            (case k
+              of T.Int =>
+                (case rest
+                      of T.Identifier s :: rest' =>
+                        (case rest'
+                          of T.Semcol :: rest2 => 
+                              (AST.Declare (AST.Int, s, NONE), rest2)
+                           | T.Asgn :: rest2 => 
+                              let
+                                val exp_w_toks = nextExp rest2
+                              in
+                                (case exp_w_toks
+                                  of (exp, (T.Semcol :: toks)) =>
+                                    ((AST.Declare (AST.Int, s, SOME exp)), toks)
+                                    | _ => raise Fail "Parse error, ending ; missing"
+                                )
+                              end
+                            | _ => raise Fail 
+                            "Parse error, variable declaration invalid"
+                        )
+                        | _ => raise Fail "Dangling int keyword"
+                    )
+                | _ => raise Fail "Not a declaration"
+              )
+        )
+      and nextBlockItem (tlist : toklist) : (AST.block_item * toklist) =
+        (case tlist
+          of (T.KW k) :: rest =>
+            (case k
+              of T.Int =>
+                let
+                  val nextDecl_w_toks = nextDeclaration tlist
+                in
+                  (case nextDecl_w_toks
+                    of (declaration, toks) =>
+                      (AST.Declaration declaration, toks)
+                  )
+                end
+              | _  =>
+                let
+                  val nextStatement_w_toks = nextStatement tlist
+                in
+                  (case nextStatement_w_toks
+                    of (statement, toks) =>
+                      (AST.Statement statement, toks)
+                  )
+                end
+            )
+        )
+      and nextBlockItemListHelper (sts_w_tlist : AST.block_item list * toklist) :
+        (AST.block_item list * toklist) =
         (case sts_w_tlist
-          of (statements, tlist) =>
+          of (block_items, tlist) =>
             let
-              val statement_w_toks = nextStatement tlist
+              val block_item_w_toks = nextBlockItem tlist
             in
-              (case statement_w_toks
-                of (statement, new_toks) =>
+              (case block_item_w_toks
+                of (block_item, new_toks) =>
                   (case new_toks
-                    of (T.CBrac :: rest) => ((statements @ [statement]), rest)
-                    | _ => nextStatementBlockHelper (statements @ [statement],
+                    of (T.CBrac :: rest) => ((block_items @ [block_item]), rest)
+                    | _ => nextBlockItemListHelper (block_items @ [block_item],
                                                     new_toks)
                   )
               )
             end
         )
-      and nextStatementBlock (tlist : Token.token list) :
-        (AST.statement list * toklist) =
-        nextStatementBlockHelper ([], tlist)
+      and nextBlockItemList (tlist : Token.token list) :
+        (AST.block_item list * toklist) =
+        nextBlockItemListHelper ([], tlist)
     in
       (case tlist
         of [] => []

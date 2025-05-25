@@ -263,7 +263,7 @@ structure Generate = struct
           end
      )
   )
-  fun genStatement (b : AST.statement * context) : (string * context) =
+  fun genStatement (b : AST.statement * context) : string =
     (case b
        of (AST.Return exp, ctxt) => 
         (case ctxt
@@ -271,13 +271,21 @@ structure Generate = struct
             let
               val exp = genExp (exp, pmap)
             in
-            (exp ^
+            exp ^
              "    movq %rbp, %rsp\n" ^
              "    popq %rbp\n" ^
-             "    retq\n", ctxt)
+             "    retq\n"
            end
         )
-      | (AST.Declare (ty, name, opt_exp), ctxt) =>
+     | (AST.Exp exp, ctxt) =>
+      (case ctxt
+        of (pmap, offset) =>
+          genExp (exp, pmap)
+      )
+    )
+  fun genDeclaration (dec_w_ctxt : AST.declaration * context) : (string * context) =
+    (case dec_w_ctxt
+      of (AST.Declare (ty, name, opt_exp), ctxt) =>
         let
           val pmap = #1(ctxt)
           val _ = if (VM.contains (name, pmap)) then
@@ -289,7 +297,7 @@ structure Generate = struct
           (case opt_exp
             of (SOME exp) => 
               (case ctxt
-                of (pmap, offset) =>
+                of (pmap, off) =>
                   let
                     val new_exp = genExp (exp, pmap)
                     val new_ctxt = (VM.ins ((name, offset), pmap), offset)
@@ -302,25 +310,23 @@ structure Generate = struct
               ("\tpushq $0\n", (VM.ins ((name, offset), pmap), offset))
           )
         end
-     | (AST.Exp exp, ctxt) =>
-      (case ctxt
-        of (pmap, offset) =>
-          let
-            val new_exp = genExp (exp, pmap)
-          in
-            (new_exp, ctxt)
-          end
-      )
     )
-  fun genBody (b : (AST.statement list) * context) : string =
+  
+  fun genBlockItem (b : AST.block_item * context) : (string * context) =
+    (case b
+      of (AST.Declaration decl, ctxt) => genDeclaration (decl, ctxt)
+      | (AST.Statement stm, ctxt) => (genStatement (stm, ctxt), ctxt)
+    )
+
+  fun genBody (b : (AST.block_item list) * context) : string =
     (case b
        of ([], ctxt) => ""
-        | ((stm :: rest), ctxt) => 
+        | ((bitem :: rest), ctxt) => 
         let
-          val stm_w_context = genStatement (stm, ctxt)
+          val bitem_w_context = genBlockItem (bitem, ctxt)
         in
-          (case stm_w_context
-            of (stm, ctxt2) => stm ^ genBody (rest, ctxt2)
+          (case bitem_w_context
+            of (bitem, ctxt2) => bitem ^ genBody (rest, ctxt2)
           )
         end
     )

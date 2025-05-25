@@ -5,44 +5,51 @@ structure AST = struct
   | Not
 
   datatype bin_operator
-  = Minus
-  | Plus
-  | Times
-  | Div
-  | AND
-  | OR
-  | Eq
-  | Neq
-  | Leq
-  | Lt
-  | Gt
-  | Geq
-  | BAnd
-  | BXor
-  | BOr
-  | BLeft
-  | BRight
-  | Mod
+    = Minus
+    | Plus
+    | Times
+    | Div
+    | AND
+    | OR
+    | Eq
+    | Neq
+    | Leq
+    | Lt
+    | Gt
+    | Geq
+    | BAnd
+    | BXor
+    | BOr
+    | BLeft
+    | BRight
+    | Mod
 
   datatype typ
-  = Int
+    = Int
 
   datatype exp
-  = Const of int
-  | UnOp of un_operator * exp
-  | BinOp of bin_operator * exp * exp
-  | Assign of string * exp
-  | Var of string
-  
+    = Const of int
+    | UnOp of un_operator * exp
+    | BinOp of bin_operator * exp * exp
+    | Assign of string * exp
+    | Var of string
 
   datatype statement
     = Return of exp
-    | Declare of typ * string * (exp option)
     | Exp of exp
+    | Conditional of exp * statement * (statement option)
+    
+  datatype declaration
+    = Declare of typ * string * (exp option)
 
-  datatype func = Fun of string * (statement list)
+  datatype block_item
+    = Statement of statement
+    | Declaration of declaration
+   
+  datatype func = Fun of string * (block_item list)
 
   datatype prog = Prog of func list
+
 
   fun unop_str (u : un_operator) : string =
     (case u
@@ -50,7 +57,7 @@ structure AST = struct
         | Complement => "~"
         | Not => "!"
     )
-  fun binop_str (b : bin_operator) : string =
+(*  fun binop_str (b : bin_operator) : string =
     (case b
        of Minus => "-"
         | Plus => "+"
@@ -65,4 +72,5 @@ structure AST = struct
         | Eq => "=="
         | Neq => "!="
     )
+*)
 end
