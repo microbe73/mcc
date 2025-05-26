@@ -44,9 +44,40 @@ structure Parse = struct
                 of (next, toks) => (AST.Assign (s, next), toks)
               )
             end
-           | _ => nextLOExp tlist
+           | _ => nextCondExp tlist
         )
 (*Assignment/Assignment operators like +=*)
+      and nextCondExp (tlist : toklist) : AST.exp * toklist =
+        let
+          val cond_w_toks = nextLOExp tlist
+        in
+          (case cond_w_toks
+            of (cond, toks) =>
+              (case toks
+                of (T.Question :: rest) =>
+                  let
+                    val exp1_w_toks = nextExp rest
+                  in
+                    (case exp1_w_toks
+                      of (exp1, toks2) =>
+                        (case toks2
+                          of (T.Colon :: rest2) =>
+                            let
+                              val exp2_w_toks = nextCondExp rest2
+                            in
+                              (case exp2_w_toks
+                                of (exp2, toks3) =>
+                                  (AST.Conditional (cond, exp1, exp2), toks3)
+                              )
+                            end
+                          | _ => raise Fail "? conditional without :"
+                        )
+                    )
+                  end
+                 | _ => cond_w_toks
+              )
+          )
+        end
       and nextLOExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -224,6 +255,7 @@ structure Parse = struct
                   end
                 | (T.IntLiteral num :: rest) => (AST.Const num, rest)
                 | (T.Identifier s :: rest) => (AST.Var s, rest)
+                | (T.Semcol :: rest) => raise Fail "Parsing ;"
                 | _ => raise Fail "Parse error, could not parse factor"
              )
       and nextStatement (tlist : Token.token list) :
@@ -243,6 +275,32 @@ structure Parse = struct
                  end
                   | T.Int => raise Fail "Not a statement"
               )
+            | T.If :: T.OPar :: rest =>
+              let
+                val exp_w_toks = nextExp rest
+              in
+                (case exp_w_toks
+                  of (exp, (T.CPar :: toks)) =>
+                    let
+                      val stm_w_toks = nextStatement toks
+                    in
+                      (case stm_w_toks
+                        of (stm, T.Else :: new_toks) =>
+                          let
+                            val elseCond_w_toks = nextStatement new_toks
+                          in
+                            (case elseCond_w_toks
+                              of (elseStm, new_toks2) =>
+                                (AST.If (exp, stm, SOME (elseStm)), new_toks2)
+                            )
+                          end
+                         | (stm, new_toks) =>
+                          (AST.If (exp, stm, NONE), new_toks)
+                      ) 
+                    end
+                    | _ => raise Fail "If conditional ) missing"
+                )
+              end
             | _ =>
               let
                 val exp_w_toks = nextExp tlist
@@ -281,6 +339,7 @@ structure Parse = struct
                     )
                 | _ => raise Fail "Not a declaration"
               )
+            | _ => raise Fail "not a declaration"
         )
       and nextBlockItem (tlist : toklist) : (AST.block_item * toklist) =
         (case tlist
@@ -305,6 +364,15 @@ structure Parse = struct
                   )
                 end
             )
+          | _ => 
+              let
+                val nextStatement_w_toks = nextStatement tlist
+              in
+                (case nextStatement_w_toks
+                  of (statement, toks) =>
+                    (AST.Statement statement, toks)
+                )
+              end
         )
       and nextBlockItemListHelper (sts_w_tlist : AST.block_item list * toklist) :
         (AST.block_item list * toklist) =

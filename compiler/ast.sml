@@ -33,11 +33,12 @@ structure AST = struct
     | BinOp of bin_operator * exp * exp
     | Assign of string * exp
     | Var of string
+    | Conditional of exp * exp * exp
 
   datatype statement
     = Return of exp
     | Exp of exp
-    | Conditional of exp * statement * (statement option)
+    | If of exp * statement * (statement option)
     
   datatype declaration
     = Declare of typ * string * (exp option)
