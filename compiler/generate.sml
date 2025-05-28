@@ -261,6 +261,24 @@ structure Generate = struct
             expstr ^
             "    movq %rax, " ^ Int.toString voffset ^ "(%rbp)\n"
           end
+       | AST.Conditional (e1, e2, e3) =>
+        let
+          val exp1 = genExp (e1, ctxt)
+          val exp2 = genExp (e2, ctxt)
+          val exp3 = genExp (e3, ctxt)
+          val else_label = new_label()
+          val post_cond = new_label()
+        in
+         exp1 ^
+         "    cmpq $0, %rax\n" ^
+         "    je " ^ else_label ^ "\n" ^
+         exp2 ^
+         "    jmp " ^ post_cond ^ "\n" ^
+         else_label ^ ":\n" ^
+         exp3 ^
+         post_cond ^ ":\n"
+
+        end
      )
   )
   fun genStatement (b : AST.statement * context) : string =
@@ -281,6 +299,40 @@ structure Generate = struct
       (case ctxt
         of (pmap, offset) =>
           genExp (exp, pmap)
+      )
+     | (AST.If (exp, stm1, NONE), ctxt) =>
+      (case ctxt
+        of (pmap, offset) =>
+          let
+            val cond = genExp (exp, pmap)
+            val post_cond = new_label()
+          in
+           cond ^
+           "    cmpq $0, %rax\n" ^
+           "    je " ^ post_cond ^ "\n" ^
+           genStatement (stm1, ctxt) ^
+           post_cond ^ ":\n" 
+          end
+      )
+    | (AST.If (exp, stm1, SOME stm2), ctxt) =>
+      (case ctxt
+        of (pmap, offset) =>
+          let
+            val cond = genExp (exp, pmap)
+            val if_clause = genStatement (stm1, ctxt)
+            val else_clause = genStatement (stm2, ctxt)
+            val else_label = new_label()
+            val post_cond = new_label()
+          in
+           cond ^
+           "    cmpq $0, %rax\n" ^
+           "    je " ^ else_label ^ "\n" ^
+           if_clause ^
+           "    jmp " ^ post_cond ^ "\n" ^
+           else_label ^ ":\n" ^
+           else_clause ^
+           post_cond ^ ":\n"
+          end
       )
     )
   fun genDeclaration (dec_w_ctxt : AST.declaration * context) : (string * context) =
