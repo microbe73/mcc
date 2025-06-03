@@ -281,7 +281,7 @@ structure Generate = struct
         end
      )
   )
-  fun genStatement (b : AST.statement * context) : string =
+  fun genStatement  (b : AST.statement * context) : string =
     (case b
        of (AST.Return exp, ctxt) => 
         (case ctxt
@@ -335,6 +335,10 @@ structure Generate = struct
           end
       )
     )
+  fun sizeOf (t : AST.typ) : int =
+    (case t
+      of AST.Int => 8
+    )
   fun genDeclaration (dec_w_ctxt : AST.declaration * context) : (string * context) =
     (case dec_w_ctxt
       of (AST.Declare (ty, name, opt_exp), ctxt) =>
@@ -344,7 +348,7 @@ structure Generate = struct
                     raise Fail "duplicate declaration"
                   else
                     0
-          val offset = #2(ctxt) - 8
+          val offset = #2(ctxt) - sizeOf ty
         in
           (case opt_exp
             of (SOME exp) => 
@@ -366,11 +370,13 @@ structure Generate = struct
   
   fun genBlockItem (b : AST.block_item * context) : (string * context) =
     (case b
-      of (AST.Declaration decl, ctxt) => genDeclaration (decl, ctxt)
-      | (AST.Statement stm, ctxt) => (genStatement (stm, ctxt), ctxt)
+      of (AST.Declaration decl, ctxt) => 
+        genDeclaration (decl, ctxt)
+      | (AST.Statement stm, ctxt) => 
+        (genStatement (stm, ctxt), ctxt)
     )
 
-  fun genBody (b : (AST.block_item list) * context) : string =
+  fun genBlock (b : (AST.block_item list) * context) : string =
     (case b
        of ([], ctxt) => ""
         | ((bitem :: rest), ctxt) => 
@@ -378,7 +384,7 @@ structure Generate = struct
           val bitem_w_context = genBlockItem (bitem, ctxt)
         in
           (case bitem_w_context
-            of (bitem, ctxt2) => bitem ^ genBody (rest, ctxt2)
+            of (bitem, ctxt2) => bitem ^ genBlock (rest, ctxt2)
           )
         end
     )
@@ -392,7 +398,7 @@ structure Generate = struct
                    "_" ^ name ^ ":\n" ^
                    "    pushq %rbp\n" ^
                    "    movq %rsp, %rbp\n" ^
-                   genBody (body, fresh_context) ^
+                   genBlock (body, fresh_context) ^
                    generate rest
           )
     )

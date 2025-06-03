@@ -8,7 +8,7 @@ structure Parse = struct
       fun nextFun (tlist : Token.token list) : (AST.func * (Token.token list))
         =
         (case tlist
-           of T.KW (T.Int) :: T.Identifier fname :: T.OPar :: T.CPar :: T.OBrac ::
+           of T.TyID (T.Int) :: T.Identifier fname :: T.OPar :: T.CPar :: T.OBrac ::
            rest =>
                    let
                      val next = nextBlockItemList rest
@@ -261,20 +261,16 @@ structure Parse = struct
       and nextStatement (tlist : Token.token list) :
         (AST.statement * toklist) =
         (case tlist
-           of (T.KW k) :: rest =>
-              (case k
-                of T.Return =>
-                  let
-                    val exp_w_toks = nextExp rest
-                  in
-                    (case exp_w_toks
-                       of (exp, (T.Semcol :: toks)) =>
-                            (AST.Return (exp), toks)
-                        | _ => raise Fail "Parse error on return, ending ; missing"
-                    )
-                 end
-                  | T.Int => raise Fail "Not a statement"
-              )
+           of T.Return :: rest =>
+              let
+                val exp_w_toks = nextExp rest
+              in
+                (case exp_w_toks
+                   of (exp, (T.Semcol :: toks)) =>
+                        (AST.Return (exp), toks)
+                    | _ => raise Fail "Parse error on return, ending ; missing"
+                )
+             end
             | T.If :: T.OPar :: rest =>
               let
                 val exp_w_toks = nextExp rest
@@ -301,6 +297,15 @@ structure Parse = struct
                     | _ => raise Fail "If conditional ) missing"
                 )
               end
+            | T.OBrac :: rest =>
+              let
+                val blockItems_w_toks = nextBlockItemList rest
+              in
+                (case blockItems_w_toks
+                  of (blockItems, toks) =>
+                    (AST.Compound blockItems, toks)
+                )
+              end
             | _ =>
               let
                 val exp_w_toks = nextExp tlist
@@ -314,8 +319,8 @@ structure Parse = struct
         )
       and nextDeclaration (tlist : toklist) : AST.declaration * toklist =
         (case tlist
-          of (T.KW k) :: rest =>
-            (case k
+          of (T.TyID t) :: rest =>
+            (case t
               of T.Int =>
                 (case rest
                       of T.Identifier s :: rest' =>
@@ -337,13 +342,12 @@ structure Parse = struct
                         )
                         | _ => raise Fail "Dangling int keyword"
                     )
-                | _ => raise Fail "Not a declaration"
               )
             | _ => raise Fail "not a declaration"
         )
       and nextBlockItem (tlist : toklist) : (AST.block_item * toklist) =
         (case tlist
-          of (T.KW k) :: rest =>
+          of (T.TyID k) :: rest =>
             (case k
               of T.Int =>
                 let
@@ -352,15 +356,6 @@ structure Parse = struct
                   (case nextDecl_w_toks
                     of (declaration, toks) =>
                       (AST.Declaration declaration, toks)
-                  )
-                end
-              | _  =>
-                let
-                  val nextStatement_w_toks = nextStatement tlist
-                in
-                  (case nextStatement_w_toks
-                    of (statement, toks) =>
-                      (AST.Statement statement, toks)
                   )
                 end
             )

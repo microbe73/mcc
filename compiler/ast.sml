@@ -39,14 +39,15 @@ structure AST = struct
     = Return of exp
     | Exp of exp
     | If of exp * statement * (statement option)
-    
-  datatype declaration
-    = Declare of typ * string * (exp option)
+    | Compound of block_item list
 
-  datatype block_item
+  and block_item
     = Statement of statement
     | Declaration of declaration
    
+  and declaration
+    = Declare of typ * string * (exp option)
+
   datatype func = Fun of string * (block_item list)
 
   datatype prog = Prog of func list

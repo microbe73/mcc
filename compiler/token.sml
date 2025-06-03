@@ -1,16 +1,16 @@
 structure Token = struct
-  datatype keyword
+  datatype type_id
   = Int
-  | Return
 
   datatype token
   = Semcol
   | OPar
+  | Return
   | CPar
   | OBrac
   | CBrac
   | Identifier of string
-  | KW of keyword
+  | TyID of type_id
   | IntLiteral of int
   | WS
   | Minus
