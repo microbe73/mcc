@@ -9,13 +9,12 @@ structure Main = struct
         | SOME st => st ^ fstring strm
       )
     end
-  fun main (files : string * string) : unit =
+  fun compile (files : string * string) : unit =
     let
       val infile = #1(files)
       val outfile = #2(files)
       val instream = TextIO.openIn infile
       val w = fstring instream
-      val w2 = TextIO.print w
       val x = Scan.scan_toks w
       val y = Parse.progAST x
       val z = Generate.generate y
@@ -25,4 +24,15 @@ structure Main = struct
     in
       ()
     end
+    fun main (s : string * string list) : OS.Process.status =
+      (case s
+        of (nm, infile :: outfile :: rest) =>
+          let
+            val _ = compile (infile, outfile)
+          in
+            OS.Process.success
+          end
+         | _ => OS.Process.failure
+      )
+
 end
