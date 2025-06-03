@@ -20,7 +20,8 @@ structure Generate = struct
   end
 
   
-      
+  fun generate (prog : AST.func list) : string =
+  let
   fun genExp (exp_w_context : AST.exp * VM.pmap) : string =
     (case exp_w_context of (exp, ctxt) =>
       (case exp
@@ -281,11 +282,9 @@ structure Generate = struct
         end
      )
   )
-  fun genStatement  (b : AST.statement * context) : string =
+  and genStatement  (b : AST.statement * VM.pmap * int) : string =
     (case b
-       of (AST.Return exp, ctxt) => 
-        (case ctxt
-          of (pmap, offset) =>
+       of (AST.Return exp, pmap, offset) => 
             let
               val exp = genExp (exp, pmap)
             in
@@ -294,15 +293,9 @@ structure Generate = struct
              "    popq %rbp\n" ^
              "    retq\n"
            end
-        )
-     | (AST.Exp exp, ctxt) =>
-      (case ctxt
-        of (pmap, offset) =>
+     | (AST.Exp exp, pmap, offset) =>
           genExp (exp, pmap)
-      )
-     | (AST.If (exp, stm1, NONE), ctxt) =>
-      (case ctxt
-        of (pmap, offset) =>
+     | (AST.If (exp, stm1, NONE), pmap, offset) =>
           let
             val cond = genExp (exp, pmap)
             val post_cond = new_label()
@@ -310,17 +303,14 @@ structure Generate = struct
            cond ^
            "    cmpq $0, %rax\n" ^
            "    je " ^ post_cond ^ "\n" ^
-           genStatement (stm1, ctxt) ^
+           genStatement (stm1, pmap, offset) ^
            post_cond ^ ":\n" 
           end
-      )
-    | (AST.If (exp, stm1, SOME stm2), ctxt) =>
-      (case ctxt
-        of (pmap, offset) =>
+    | (AST.If (exp, stm1, SOME stm2), pmap, offset) =>
           let
             val cond = genExp (exp, pmap)
-            val if_clause = genStatement (stm1, ctxt)
-            val else_clause = genStatement (stm2, ctxt)
+            val if_clause = genStatement (stm1, pmap, offset)
+            val else_clause = genStatement (stm2, pmap, offset)
             val else_label = new_label()
             val post_cond = new_label()
           in
@@ -333,63 +323,69 @@ structure Generate = struct
            else_clause ^
            post_cond ^ ":\n"
           end
-      )
+    | (AST.Compound block_items, var_map, offset) =>
+      genBlock (block_items, var_map, offset, VM.empty_map)
     )
-  fun sizeOf (t : AST.typ) : int =
+  and sizeOf (t : AST.typ) : int =
     (case t
       of AST.Int => 8
     )
-  fun genDeclaration (dec_w_ctxt : AST.declaration * context) : (string * context) =
+  and genDeclaration (dec_w_ctxt : AST.declaration * VM.pmap * int * VM.pmap) : (string * VM.pmap * int * VM.pmap) =
     (case dec_w_ctxt
-      of (AST.Declare (ty, name, opt_exp), ctxt) =>
+      of (AST.Declare (ty, name, opt_exp), var_map, offset, current_scope) =>
         let
-          val pmap = #1(ctxt)
-          val _ = if (VM.contains (name, pmap)) then
+          val _ = if (VM.contains (name, current_scope)) then
                     raise Fail "duplicate declaration"
                   else
                     0
-          val offset = #2(ctxt) - sizeOf ty
+          val offset = offset - sizeOf ty
         in
           (case opt_exp
             of (SOME exp) => 
-              (case ctxt
-                of (pmap, off) =>
                   let
-                    val new_exp = genExp (exp, pmap)
-                    val new_ctxt = (VM.ins ((name, offset), pmap), offset)
+                    val new_exp = genExp (exp, var_map)
+                    val new_map = VM.ins ((name, offset), var_map)
+                    val new_current = VM.ins ((name, offset), current_scope)
                   in
                     (new_exp ^
-                    "\tpushq %rax\n", new_ctxt)
+                    "\tpushq %rax\n", 
+                    new_map, offset, new_current)
                   end
-            )
             | NONE =>
-              ("\tpushq $0\n", (VM.ins ((name, offset), pmap), offset))
+              let
+                val new_map = VM.ins ((name, offset), var_map)
+                val new_current = VM.ins ((name, offset), current_scope)
+              in
+                ("\tpushq $0\n", new_map, offset, new_current)
+              end
           )
         end
     )
   
-  fun genBlockItem (b : AST.block_item * context) : (string * context) =
+  and genBlockItem (b : AST.block_item * VM.pmap * int * VM.pmap) : (string * VM.pmap * int * VM.pmap) =
     (case b
-      of (AST.Declaration decl, ctxt) => 
-        genDeclaration (decl, ctxt)
-      | (AST.Statement stm, ctxt) => 
-        (genStatement (stm, ctxt), ctxt)
+      of (AST.Declaration decl, var_map, offset, current_scope) => 
+        genDeclaration (decl, var_map, offset, current_scope)
+      | (AST.Statement stm, var_map, offset, current_scope) => 
+        (genStatement (stm, var_map, offset), var_map, offset, current_scope)
     )
 
-  fun genBlock (b : (AST.block_item list) * context) : string =
-    (case b
-       of ([], ctxt) => ""
-        | ((bitem :: rest), ctxt) => 
-        let
-          val bitem_w_context = genBlockItem (bitem, ctxt)
-        in
-          (case bitem_w_context
-            of (bitem, ctxt2) => bitem ^ genBlock (rest, ctxt2)
-          )
-        end
-    )
-  fun generate (t : AST.func list) : string =
-    (case t
+  and genBlock (b : (AST.block_item list) * VM.pmap * int * VM.pmap) : string =
+      (case b
+         of ([], var_map, offset, current_scope) => 
+               "    addq $" ^ Int.toString (VM.vsize current_scope) ^ ", %rsp\n"
+          | ((bitem :: rest), var_map, offset, current_scope) => 
+          let
+            val bitem_w_context = genBlockItem (bitem, var_map, offset, current_scope)
+          in
+            (case bitem_w_context
+              of (bitem, var_map, offset, current_scope) =>
+               bitem ^ genBlock (rest, var_map, offset, current_scope)
+            )
+          end
+      )
+  in
+    (case prog
        of [] => ""
         | (fnc :: rest) =>
           (case fnc
@@ -398,10 +394,11 @@ structure Generate = struct
                    "_" ^ name ^ ":\n" ^
                    "    pushq %rbp\n" ^
                    "    movq %rsp, %rbp\n" ^
-                   genBlock (body, fresh_context) ^
+                   genBlock (body, VM.empty_map, 0, VM.empty_map) ^
                    generate rest
           )
     )
+  end
 (*
   fun printExp (exp : AST.exp ) : string =
     (case exp

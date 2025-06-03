@@ -8,6 +8,7 @@ structure VarMap : sig
   val contains : string * pmap -> bool (* check if value is in map *)
   val ins   : (string * var_info) * pmap -> pmap  (* add value to map *)                          
   val rem   : string * pmap -> pmap  (* remove value from map *)
+  val vsize : pmap -> int
 end = struct
 
   type var_info = int
@@ -29,6 +30,8 @@ end = struct
           )
       )
     end
+  fun vsize (m : pmap) : int =
+    (length m) * 8
   fun contains (inp : string * pmap) : bool =
     let
       val name = #1(inp)
