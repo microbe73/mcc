@@ -3,6 +3,7 @@ structure Parse = struct
   structure T = Token
   type toklist = Token.token list
   type binlist = AST.bin_operator list
+  
   fun progAST (tlist : Token.token list) : AST.func list =
     let
       fun nextFun (tlist : Token.token list) : (AST.func * (Token.token list))
@@ -256,7 +257,9 @@ structure Parse = struct
                 | (T.IntLiteral num :: rest) => (AST.Const num, rest)
                 | (T.Identifier s :: rest) => (AST.Var s, rest)
                 | (T.Semcol :: rest) => raise Fail "Parsing ;"
-                | _ => raise Fail "Parse error, could not parse factor"
+                | _ => raise Fail
+                ("Parse error, could not parse factor " ^
+                T.toString (List.hd tlist))
              )
       and nextStatement (tlist : Token.token list) :
         (AST.statement * toklist) =
@@ -292,7 +295,7 @@ structure Parse = struct
                           end
                          | (stm, new_toks) =>
                           (AST.If (exp, stm, NONE), new_toks)
-                      ) 
+                      )
                     end
                     | _ => raise Fail "If conditional ) missing"
                 )
@@ -306,13 +309,60 @@ structure Parse = struct
                     (AST.Compound blockItems, toks)
                 )
               end
+            | T.For :: T.OPar :: rest =>
+                nextFor rest (*TODO: Make nextFor not look horrifying*)
+            | T.While :: T.OPar :: rest =>
+                let
+                  val nextExp_w_toks = nextExp rest
+                in
+                  (case nextExp_w_toks
+                    of (exp, T.CPar :: rest') =>
+                      let
+                        val nextStm_w_toks = nextStatement rest'
+                      in
+                        (case nextStm_w_toks
+                          of (statement, toks) =>
+                            (AST.While (exp, statement), toks)
+                        )
+                      end
+                     | _ => raise Fail "While condition missing )"
+                  )
+                end
+            | T.Do :: rest =>
+                let
+                  val nextStm_w_toks = nextStatement rest
+                in
+                  (case nextStm_w_toks
+                     of (statement, T.While :: T.OPar :: rest') =>
+                      let
+                        val nextExp_w_toks = nextExp rest'
+                      in
+                        (case nextExp_w_toks
+                          of (exp, T.CPar :: toks) =>
+                            (AST.Do (statement, exp), toks)
+                           | _ => raise Fail "While cond missing )"
+                        )
+                      end
+                      | _ => raise Fail "Do statement unterminated"
+                  )
+                end
+            | T.Break :: rest =>
+                (case rest
+                  of T.Semcol :: rest' => (AST.Break, rest')
+                    | _ => raise Fail "Break statement missing ;"
+                )
+            | T.Continue :: rest =>
+                (case rest
+                  of T.Semcol :: rest' => (AST.Continue, rest')
+                    | _ => raise Fail "Continue statement missing ;"
+                )
             | _ =>
               let
                 val exp_w_toks = nextExp tlist
               in
                 (case exp_w_toks
                   of (exp, (T.Semcol :: toks)) =>
-                    (AST.Exp exp, toks)
+                    (AST.Exp (SOME exp), toks)
                    | _ => raise Fail "Parse error, ending ; missing"
                 )
               end
@@ -389,6 +439,265 @@ structure Parse = struct
       and nextBlockItemList (tlist : Token.token list) :
         (AST.block_item list * toklist) =
         nextBlockItemListHelper ([], tlist)
+      and nextFor (rest : toklist) : AST.statement * toklist =
+        (case rest
+          of (T.Semcol :: rest') =>
+               (case rest'
+                  of (T.Semcol :: rest'') =>
+                    (case rest''
+                      of (T.CPar :: rest''') =>
+                           let
+                             val body_w_toks = nextStatement rest'''
+                           in
+                             (case body_w_toks
+                              of (body, toks) =>
+                                   (AST.For (NONE, AST.Const 1, NONE,
+                                    body), rest''')
+                             )
+                           end
+                        | _ =>
+                            let
+                              val exp2_w_r = nextExp rest''
+                            in
+                              (case exp2_w_r
+                                of (exp2, T.CPar :: rest''') =>
+                                  let
+                                    val body_w_toks = nextStatement
+                                    rest'''
+                                  in
+                                    (case body_w_toks
+                                      of (body, toks) =>
+                                      (AST.For (NONE, AST.Const 1, SOME exp2,
+                                       body), toks)
+                                    )
+                                  end
+                                | _ =>
+                                raise Fail "For loop unclosed paren"
+                              )
+                            end
+                    )
+                   | _ =>
+                    let
+                      val exp1_w_r = nextExp rest'
+                    in
+                      (case exp1_w_r
+                        of (exp1, T.Semcol :: rest'') =>
+                             (case rest''
+                              of T.CPar :: rest''' =>
+                                 let
+                                   val body_w_toks = nextStatement rest'''
+                                 in
+                                   (case body_w_toks
+                                    of (body, toks) =>
+                                         (AST.For (NONE, exp1, NONE,
+                                          body), rest''')
+                                   )
+                                 end
+                              | _ =>
+                                  let
+                                    val exp2_w_r = nextExp rest''
+                                  in
+                                    (case exp2_w_r
+                                      of (exp2, T.CPar :: rest''') =>
+                                        let
+                                          val body_w_toks = nextStatement
+                                          rest'''
+                                        in
+                                          (case body_w_toks
+                                            of (body, toks) =>
+                                            (AST.For (NONE, exp1, SOME exp2,
+                                             body), toks)
+                                          )
+                                        end
+                                      | _ =>
+                                      raise Fail "For loop unclosed paren"
+                                    )
+                                  end
+                                )
+                          | _ => 
+                            raise Fail "For loop unterminated expression"
+                      )
+                    end
+               )
+           | _ =>
+            let
+              val blockItem_w_toks = nextBlockItem rest
+            in
+              (case blockItem_w_toks
+                of (AST.Declaration decl, rest') =>
+                     (case rest'
+                      of T.Semcol :: rest'' =>
+                           (case rest''
+                            of T.CPar :: rest''' =>
+                                let
+                                  val body_w_toks = nextStatement rest'''
+                                in
+                                  (case body_w_toks
+                                    of (body, toks) =>
+                                      (AST.ForDecl (decl, AST.Const 1,
+                                       NONE, body), toks)
+                                  )
+                                end
+                              | _ =>
+                                  let
+                                    val exp2_w_r = nextExp rest''
+                                  in
+                                    (case exp2_w_r
+                                       of (exp2, T.CPar :: rest''') =>
+                                            let
+                                              val body_w_toks =
+                                                nextStatement rest'''
+                                            in
+                                              (case body_w_toks
+                                                 of (body, toks) =>
+                                                  (AST.ForDecl (decl,
+                                                   AST.Const 1, SOME
+                                                   exp2, body), toks)
+                                              )
+                                            end
+                                         | _ => raise Fail ("for loop" ^
+                                         "missing )")
+                                    )
+                                  end
+                           )
+                       | _ =>
+                           let
+                             val exp1_w_r = nextExp rest'
+                            in
+                              (case exp1_w_r
+                                of (exp1, T.Semcol :: rest'') =>
+                                     (case rest''
+                                        of (T.CPar :: rest''') =>
+                                          let
+                                            val body_w_toks =
+                                              nextStatement rest'''
+                                          in
+                                            (case body_w_toks
+                                              of (body, toks) =>
+                                                (AST.ForDecl (decl, exp1,
+                                                NONE, body), toks)
+                                            )
+                                          end
+                                         | _ =>
+                                            let
+                                              val exp2_w_r = nextExp
+                                              rest''
+                                            in
+                                              (case exp2_w_r
+                                                 of (exp2, T.CPar ::
+                                                 rest''') =>
+                                                 let
+                                                   val body_w_toks =
+                                                     nextStatement
+                                                     rest'''
+                                                 in
+                                                   (case body_w_toks
+                                                    of (body, toks) =>
+                                                      (AST.ForDecl (decl,
+                                                      exp1, SOME exp2,
+                                                      body), toks)
+                                                   )
+                                                 end
+                                                 | _ => raise Fail
+                                                 "for loop missing )"
+                                              )
+                                            end
+                                     )
+                                 | _ => raise Fail "missing ; in for loop"
+                              )
+                            end
+                     )
+                 | (AST.Statement stm, rest') =>
+                     (case stm
+                      of AST.Exp exp_option =>
+                      (case rest'
+                      of T.Semcol :: rest'' =>
+                           (case rest''
+                            of T.CPar :: rest''' =>
+                                let
+                                  val body_w_toks = nextStatement rest'''
+                                in
+                                  (case body_w_toks
+                                    of (body, toks) =>
+                                      (AST.For (exp_option, AST.Const 1,
+                                       NONE, body), toks)
+                                  )
+                                end
+                              | _ =>
+                                  let
+                                    val exp2_w_r = nextExp rest''
+                                  in
+                                    (case exp2_w_r
+                                       of (exp2, T.CPar :: rest''') =>
+                                            let
+                                              val body_w_toks =
+                                                nextStatement rest'''
+                                            in
+                                              (case body_w_toks
+                                                 of (body, toks) =>
+                                                  (AST.For (exp_option,
+                                                   AST.Const 1, SOME
+                                                   exp2, body), toks)
+                                              )
+                                            end
+                                         | _ => raise Fail ("for loop" ^
+                                         "missing )")
+                                    )
+                                  end
+                           )
+                       | _ =>
+                           let
+                             val exp1_w_r = nextExp rest'
+                            in
+                              (case exp1_w_r
+                                of (exp1, T.Semcol :: rest'') =>
+                                     (case rest''
+                                        of (T.CPar :: rest''') =>
+                                          let
+                                            val body_w_toks =
+                                              nextStatement rest'''
+                                          in
+                                            (case body_w_toks
+                                              of (body, toks) =>
+                                                (AST.For (exp_option, exp1,
+                                                NONE, body), toks)
+                                            )
+                                          end
+                                         | _ =>
+                                            let
+                                              val exp2_w_r = nextExp
+                                              rest''
+                                            in
+                                              (case exp2_w_r
+                                                 of (exp2, T.CPar ::
+                                                 rest''') =>
+                                                 let
+                                                   val body_w_toks =
+                                                     nextStatement
+                                                     rest'''
+                                                 in
+                                                   (case body_w_toks
+                                                    of (body, toks) =>
+                                                      (AST.For
+                                                      (exp_option,
+                                                      exp1, SOME exp2,
+                                                      body), toks)
+                                                   )
+                                                 end
+                                                 | _ => raise Fail
+                                                 "for loop missing )"
+                                              )
+                                            end
+                                     )
+                                 | _ => raise Fail "missing ; in for loop"
+                              )
+                            end
+                     )
+                    | _ => raise Fail "Cannot put statement in for loop"
+                  )
+              )
+            end
+          )
     in
       (case tlist
         of [] => []

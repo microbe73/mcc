@@ -2,5 +2,5 @@
 # Build the C compiler
 Args=("$@")
 Outfile=${Args[0]}
-printf 'CM.make "lang.cm";\nSMLofNJ.exportML("%s");\n' $Outfile
+printf 'CM.make "lang.cm";\nSMLofNJ.exportML("%s");\n' $Outfile | sml
 

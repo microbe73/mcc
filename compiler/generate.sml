@@ -4,6 +4,7 @@ structure Generate = struct
   those as well), and int is the current offset context *)
   type context = (VM.pmap * int)
   val fresh_context : context = (VM.empty_map, 0)
+  type loop_info = {continue_label : string option, break_label : string option}
 
 
 
@@ -293,8 +294,11 @@ structure Generate = struct
              "    popq %rbp\n" ^
              "    retq\n"
            end
-     | (AST.Exp exp, pmap, offset) =>
-          genExp (exp, pmap)
+     | (AST.Exp exp_option, pmap, offset) =>
+         (case exp_option
+            of NONE => ""
+             | SOME exp => genExp (exp, pmap)
+         )
      | (AST.If (exp, stm1, NONE), pmap, offset) =>
           let
             val cond = genExp (exp, pmap)
