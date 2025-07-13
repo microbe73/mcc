@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fill in name of image file here:
-Imgfile='image.amd64-darwin'
+Imgfile='comp.amd64-darwin'
 Args=("$@")
 Infile=${Args[0]}
 Outfile=${Args[1]}
