@@ -43,6 +43,7 @@ structure Token = struct
   | Do
   | Break
   | Continue
+  | Comma
 
   fun toString (tok : token) : string =
     (case tok
@@ -86,6 +87,7 @@ structure Token = struct
        | Do => "do"
        | Break => "break"
        | Continue => "continue"
+       | Comma => ","
     )
 end
   

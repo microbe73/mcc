@@ -278,8 +278,12 @@ structure Generate = struct
          exp3 ^
          post_cond ^ ":\n"
         end
+        | AST.FunCall (name, arglist) =>
+            genFunCall arglist
      )
   )
+  and genFunCall (args : AST.exp list) : string =
+    ""
   and genStatement  (b : AST.statement * context) : string =
     (case b
        of (AST.Return exp, {break_label = bl, continue_label = cl, var_map =
@@ -501,13 +505,15 @@ structure Generate = struct
        of [] => ""
         | (fnc :: rest) =>
           (case fnc
-             of AST.Fun (name, body) =>
+             of AST.Fun (name, arglist, SOME body, ret_type)  =>
                    "    .globl _" ^ name ^ "\n" ^
                    "_" ^ name ^ ":\n" ^
                    "    pushq %rbp\n" ^
                    "    movq %rsp, %rbp\n" ^
                    genBlock (body, fresh_context) ^
                    generate rest
+              | AST.Fun (name, arglist, NONE, ret_type) =>
+                  ""
           )
     )
   end

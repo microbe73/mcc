@@ -34,6 +34,7 @@ structure AST = struct
     | Assign of string * exp
     | Var of string
     | Conditional of exp * exp * exp
+    | FunCall of string * exp list
 
   datatype statement
     = Return of exp
@@ -53,7 +54,8 @@ structure AST = struct
   and declaration
     = Declare of typ * string * (exp option)
 
-  datatype func = Fun of string * (block_item list)
+  datatype func = Fun of string * ((string * typ) list) * (block_item list option)
+   * typ (*Name, params, param types, body if not declaration, return type*)
 
   datatype prog = Prog of func list
 

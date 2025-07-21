@@ -3,25 +3,59 @@ structure Parse = struct
   structure T = Token
   type toklist = Token.token list
   type binlist = AST.bin_operator list
-  
+  fun type_token (t : Token.type_id) : AST.typ =
+    (case t
+      of T.Int => AST.Int
+    )
+
   fun progAST (tlist : Token.token list) : AST.func list =
     let
       fun nextFun (tlist : Token.token list) : (AST.func * (Token.token list))
         =
         (case tlist
-           of T.TyID (T.Int) :: T.Identifier fname :: T.OPar :: T.CPar :: T.OBrac ::
-           rest =>
+           of T.TyID t :: T.Identifier fname :: T.OPar :: rest =>
                    let
-                     val next = nextBlockItemList rest
+                     val (args, new_toks) = nextArgs ([], rest)
                    in
-                     (case next
-                        of (statements, toks) => 
-                        (AST.Fun (fname, statements), toks)
+                     (case new_toks
+                      of T.Semcol :: rest2 =>
+                           (AST.Fun (fname, args, NONE, (type_token t)) , rest2)
+                        | T.OBrac :: rest2 =>
+                            let
+                              val (body, new_toks2) = nextBlockItemList rest2
+                            in
+                              (AST.Fun (fname, args, SOME body, (type_token t)),
+                              new_toks2)
+                            end
+                        | _ => raise Fail "Invalid function declaration"
                      )
                    end
             | _ => raise Fail "Parse error, unable to find function declaration"
 
         )
+      and nextArgs (args_w_tlist : ((string * AST.typ) list) * toklist)
+        : ((string * AST.typ) list) * toklist =
+        let
+          val (args, tlist) = args_w_tlist
+        in
+          (case tlist
+            of T.TyID t :: T.Identifier argname :: rest =>
+                 let
+                   val new_args = args @ [(argname, (type_token t))]
+                 in
+                   (case rest
+                      of T.Comma :: rest' =>
+                          nextArgs (new_args, rest')
+                       | T.CPar :: rest' =>
+                           (new_args, rest')
+                       | _ => raise Fail "error while parsing function argument"
+                   )
+                 end
+             | T.CPar :: rest => ([], rest)
+             | _ => 
+                 raise Fail "error while attempting to parse function arguments"
+          )
+        end
       and nextGenExp (ops_w_lvl : AST.exp * toklist * (toklist -> AST.exp * toklist) * AST.bin_operator *
       (AST.exp * toklist -> AST.exp * toklist)) : AST.exp * toklist =
         (case ops_w_lvl
@@ -255,12 +289,39 @@ structure Parse = struct
                     )
                   end
                 | (T.IntLiteral num :: rest) => (AST.Const num, rest)
+                | (T.Identifier fname :: T.OPar :: rest) =>
+                    let
+                      val (call_args, new_toks) = nextCallArgs ([], rest)
+                    in
+                      (AST.FunCall (fname, call_args), new_toks)
+                    end
                 | (T.Identifier s :: rest) => (AST.Var s, rest)
                 | (T.Semcol :: rest) => raise Fail "Parsing ;"
                 | _ => raise Fail
                 ("Parse error, could not parse factor " ^
                 T.toString (List.hd tlist))
              )
+      and nextCallArgs (args_w_tlist : AST.exp list * toklist) : (AST.exp list *
+        toklist) =
+        let
+          val (args, tlist) = args_w_tlist
+        in
+          (case tlist
+            of T.CPar :: rest => (args, rest)
+              | _ =>
+                  let
+                    val (exp, new_toks) = nextExp tlist
+                  in
+                    (case new_toks
+                       of T.Comma :: rest =>
+                        nextCallArgs (args @ [exp], rest)
+                        | T.CPar :: rest =>
+                            (args @ [exp], rest)
+                        | _ => raise Fail "error parsing function call args"
+                    )
+                  end
+          )
+        end
       and nextStatement (tlist : Token.token list) :
         (AST.statement * toklist) =
         (case tlist
