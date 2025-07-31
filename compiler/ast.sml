@@ -50,12 +50,12 @@ structure AST = struct
   and block_item
     = Statement of statement
     | Declaration of declaration
-   
   and declaration
     = Declare of typ * string * (exp option)
 
-  datatype func = Fun of string * ((string * typ) list) * (block_item list option)
-   * typ (*Name, params, param types, body if not declaration, return type*)
+  datatype func =
+    Fun of string * ((string * typ) list) * (block_item list option) * typ
+    (*Name, params, param types, body if not declaration, return type*)
 
   datatype prog = Prog of func list
 

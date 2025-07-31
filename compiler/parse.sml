@@ -61,56 +61,48 @@ structure Parse = struct
         (case ops_w_lvl
           of (term, toks, nextPrecFn, binop, caller) =>
             let
-              val next_term = nextPrecFn toks
+              val (nterm, ntoks) = nextPrecFn toks
             in
-              (case next_term
-                of (nterm, ntoks) =>
-                  caller ((AST.BinOp (binop, term, nterm)), ntoks)
-              )
+              caller ((AST.BinOp (binop, term, nterm)), ntoks)
             end
         )
       and nextExp (tlist : toklist) : AST.exp * toklist =
         (case tlist
           of T.Identifier s :: T.Asgn :: rest =>
             let
-              val next_w_toks = nextExp rest
+              val (next, toks) = nextExp rest
             in
-              (case next_w_toks
-                of (next, toks) => (AST.Assign (s, next), toks)
-              )
+               (AST.Assign (s, next), toks)
             end
            | _ => nextCondExp tlist
         )
 (*Assignment/Assignment operators like +=*)
       and nextCondExp (tlist : toklist) : AST.exp * toklist =
         let
-          val cond_w_toks = nextLOExp tlist
+          val (cond, toks) = nextLOExp tlist
         in
-          (case cond_w_toks
-            of (cond, toks) =>
-              (case toks
-                of (T.Question :: rest) =>
-                  let
-                    val exp1_w_toks = nextExp rest
-                  in
-                    (case exp1_w_toks
-                      of (exp1, toks2) =>
-                        (case toks2
-                          of (T.Colon :: rest2) =>
-                            let
-                              val exp2_w_toks = nextCondExp rest2
-                            in
-                              (case exp2_w_toks
-                                of (exp2, toks3) =>
-                                  (AST.Conditional (cond, exp1, exp2), toks3)
-                              )
-                            end
-                          | _ => raise Fail "? conditional without :"
-                        )
+          (case toks
+            of (T.Question :: rest) =>
+              let
+                val exp1_w_toks = nextExp rest
+              in
+                (case exp1_w_toks
+                  of (exp1, toks2) =>
+                    (case toks2
+                      of (T.Colon :: rest2) =>
+                        let
+                          val exp2_w_toks = nextCondExp rest2
+                        in
+                          (case exp2_w_toks
+                            of (exp2, toks3) =>
+                              (AST.Conditional (cond, exp1, exp2), toks3)
+                          )
+                        end
+                      | _ => raise Fail "? conditional without :"
                     )
-                  end
-                 | _ => cond_w_toks
-              )
+                )
+              end
+             | _ => (cond, toks)
           )
         end
       and nextLOExpHelper (term_w_tlist : AST.exp * toklist) :
@@ -137,7 +129,6 @@ structure Parse = struct
         AST.exp * toklist =
         nextLAExpHelper (nextBORExp (tlist))
 
-      
       and nextBORExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -150,7 +141,6 @@ structure Parse = struct
         AST.exp * toklist =
         nextBORExpHelper (nextBXORExp (tlist))
 
-      
       and nextBXORExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -162,7 +152,7 @@ structure Parse = struct
       and nextBXORExp (tlist : Token.token list) :
         AST.exp * toklist =
         nextBXORExpHelper (nextBANDExp (tlist))
-      
+
       and nextBANDExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -174,7 +164,7 @@ structure Parse = struct
       and nextBANDExp (tlist : Token.token list) :
         AST.exp * toklist =
         nextBANDExpHelper (nextEQExp (tlist))
-      
+
       and nextEQExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -188,7 +178,7 @@ structure Parse = struct
       and nextEQExp (tlist : Token.token list) :
         AST.exp * toklist =
         nextEQExpHelper (nextRELExp (tlist))
-      
+
       and nextRELExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -206,7 +196,7 @@ structure Parse = struct
       and nextRELExp (tlist : Token.token list) :
         AST.exp * toklist =
         nextRELExpHelper (nextBSExp (tlist))
-      
+
       and nextBSExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
         (case term_w_tlist
@@ -234,7 +224,7 @@ structure Parse = struct
       and nextAExp (tlist : Token.token list) :
         AST.exp * toklist =
         nextAExpHelper (nextTerm (tlist))
-          
+
       and nextTermHelper (factor_w_tlist :  AST.exp * toklist) :
            (AST.exp * toklist) =
         (case factor_w_tlist
@@ -250,8 +240,8 @@ structure Parse = struct
       and nextTerm (tlist : Token.token list):
            (AST.exp * toklist) =
          nextTermHelper (nextFactor (tlist))
-         
-      and nextFactor(tlist : Token.token list) :
+
+      and nextFactor (tlist : Token.token list) :
             (AST.exp * toklist) =
             (case tlist
               of T.OPar :: rest =>
@@ -327,25 +317,25 @@ structure Parse = struct
         (case tlist
            of T.Return :: rest =>
               let
-                val exp_w_toks = nextExp rest
+                val (exp, toks) = nextExp rest
               in
-                (case exp_w_toks
-                   of (exp, (T.Semcol :: toks)) =>
+                (case toks
+                   of (T.Semcol :: toks) =>
                         (AST.Return (exp), toks)
                     | _ => raise Fail "Parse error on return, ending ; missing"
                 )
              end
             | T.If :: T.OPar :: rest =>
               let
-                val exp_w_toks = nextExp rest
+                val (exp, toks) = nextExp rest
               in
-                (case exp_w_toks
-                  of (exp, (T.CPar :: toks)) =>
+                (case toks
+                  of T.CPar :: toks =>
                     let
-                      val stm_w_toks = nextStatement toks
+                      val (stm, toks') = nextStatement toks
                     in
-                      (case stm_w_toks
-                        of (stm, T.Else :: new_toks) =>
+                      (case toks'
+                        of T.Else :: new_toks =>
                           let
                             val elseCond_w_toks = nextStatement new_toks
                           in
@@ -354,8 +344,8 @@ structure Parse = struct
                                 (AST.If (exp, stm, SOME (elseStm)), new_toks2)
                             )
                           end
-                         | (stm, new_toks) =>
-                          (AST.If (exp, stm, NONE), new_toks)
+                         | _ =>
+                          (AST.If (exp, stm, NONE), toks')
                       )
                     end
                     | _ => raise Fail "If conditional ) missing"
@@ -363,43 +353,37 @@ structure Parse = struct
               end
             | T.OBrac :: rest =>
               let
-                val blockItems_w_toks = nextBlockItemList rest
+                val (blockItems, toks) = nextBlockItemList rest
               in
-                (case blockItems_w_toks
-                  of (blockItems, toks) =>
-                    (AST.Compound blockItems, toks)
-                )
+                (AST.Compound blockItems, toks)
               end
             | T.For :: T.OPar :: rest =>
                 nextFor rest (*TODO: Make nextFor not look horrifying*)
             | T.While :: T.OPar :: rest =>
                 let
-                  val nextExp_w_toks = nextExp rest
+                  val (exp, toks) = nextExp rest
                 in
-                  (case nextExp_w_toks
-                    of (exp, T.CPar :: rest') =>
+                  (case toks
+                    of T.CPar :: rest' =>
                       let
-                        val nextStm_w_toks = nextStatement rest'
+                        val (statement, toks') = nextStatement rest'
                       in
-                        (case nextStm_w_toks
-                          of (statement, toks) =>
-                            (AST.While (exp, statement), toks)
-                        )
+                        (AST.While (exp, statement), toks')
                       end
                      | _ => raise Fail "While condition missing )"
                   )
                 end
             | T.Do :: rest =>
                 let
-                  val nextStm_w_toks = nextStatement rest
+                  val (statement, toks) = nextStatement rest
                 in
-                  (case nextStm_w_toks
-                     of (statement, T.While :: T.OPar :: rest') =>
+                  (case toks
+                     of T.While :: T.OPar :: rest' =>
                       let
-                        val nextExp_w_toks = nextExp rest'
+                        val (exp, toks') = nextExp rest'
                       in
-                        (case nextExp_w_toks
-                          of (exp, T.CPar :: toks) =>
+                        (case toks'
+                          of T.CPar :: toks =>
                             (AST.Do (statement, exp), toks)
                            | _ => raise Fail "While cond missing )"
                         )
@@ -462,22 +446,16 @@ structure Parse = struct
             (case k
               of T.Int =>
                 let
-                  val nextDecl_w_toks = nextDeclaration tlist
+                  val (declaration, toks) = nextDeclaration tlist
                 in
-                  (case nextDecl_w_toks
-                    of (declaration, toks) =>
-                      (AST.Declaration declaration, toks)
-                  )
+                  (AST.Declaration declaration, toks)
                 end
             )
-          | _ => 
+          | _ =>
               let
-                val nextStatement_w_toks = nextStatement tlist
+                val (statement, toks) = nextStatement tlist
               in
-                (case nextStatement_w_toks
-                  of (statement, toks) =>
-                    (AST.Statement statement, toks)
-                )
+                (AST.Statement statement, toks)
               end
         )
       and nextBlockItemListHelper (sts_w_tlist : AST.block_item list * toklist) :
@@ -485,15 +463,12 @@ structure Parse = struct
         (case sts_w_tlist
           of (block_items, tlist) =>
             let
-              val block_item_w_toks = nextBlockItem tlist
+              val (block_item, new_toks) = nextBlockItem tlist
             in
-              (case block_item_w_toks
-                of (block_item, new_toks) =>
-                  (case new_toks
-                    of (T.CBrac :: rest) => ((block_items @ [block_item]), rest)
-                    | _ => nextBlockItemListHelper (block_items @ [block_item],
-                                                    new_toks)
-                  )
+              (case new_toks
+                of (T.CBrac :: rest) => ((block_items @ [block_item]), rest)
+                | _ => nextBlockItemListHelper (block_items @ [block_item],
+                                                new_toks)
               )
             end
         )
@@ -508,29 +483,22 @@ structure Parse = struct
                     (case rest''
                       of (T.CPar :: rest''') =>
                            let
-                             val body_w_toks = nextStatement rest'''
+                             val (body, toks) = nextStatement rest'''
                            in
-                             (case body_w_toks
-                              of (body, toks) =>
-                                   (AST.For (NONE, AST.Const 1, NONE,
-                                    body), rest''')
-                             )
+                             (AST.For (NONE, AST.Const 1, NONE,
+                              body), rest''')
                            end
                         | _ =>
                             let
-                              val exp2_w_r = nextExp rest''
+                              val (exp2, rest) = nextExp rest''
                             in
-                              (case exp2_w_r
-                                of (exp2, T.CPar :: rest''') =>
+                              (case rest
+                                of T.CPar :: rest''' =>
                                   let
-                                    val body_w_toks = nextStatement
-                                    rest'''
+                                    val (body, toks) = nextStatement rest'''
                                   in
-                                    (case body_w_toks
-                                      of (body, toks) =>
-                                      (AST.For (NONE, AST.Const 1, SOME exp2,
-                                       body), toks)
-                                    )
+                                    (AST.For (NONE, AST.Const 1, SOME exp2,
+                                     body), toks)
                                   end
                                 | _ =>
                                 raise Fail "For loop unclosed paren"
@@ -539,43 +507,36 @@ structure Parse = struct
                     )
                    | _ =>
                     let
-                      val exp1_w_r = nextExp rest'
+                      val (exp1, rest) = nextExp rest'
                     in
-                      (case exp1_w_r
-                        of (exp1, T.Semcol :: rest'') =>
+                      (case rest
+                        of T.Semcol :: rest'' =>
                              (case rest''
                               of T.CPar :: rest''' =>
                                  let
-                                   val body_w_toks = nextStatement rest'''
+                                   val (body, toks) = nextStatement rest'''
                                  in
-                                   (case body_w_toks
-                                    of (body, toks) =>
-                                         (AST.For (NONE, exp1, NONE,
-                                          body), rest''')
-                                   )
+                                   (AST.For (NONE, exp1, NONE, body), rest''')
                                  end
                               | _ =>
                                   let
-                                    val exp2_w_r = nextExp rest''
+                                    val (exp2, rest) = nextExp rest''
                                   in
-                                    (case exp2_w_r
-                                      of (exp2, T.CPar :: rest''') =>
+                                    (case rest
+                                      of T.CPar :: rest''' =>
                                         let
-                                          val body_w_toks = nextStatement
+                                          val (body, toks) = nextStatement
                                           rest'''
                                         in
-                                          (case body_w_toks
-                                            of (body, toks) =>
-                                            (AST.For (NONE, exp1, SOME exp2,
-                                             body), toks)
-                                          )
+                                          (AST.For (NONE, exp1, SOME exp2,
+                                           body), toks)
                                         end
                                       | _ =>
                                       raise Fail "For loop unclosed paren"
                                     )
                                   end
                                 )
-                          | _ => 
+                          | _ =>
                             raise Fail "For loop unterminated expression"
                       )
                     end
@@ -591,13 +552,10 @@ structure Parse = struct
                            (case rest''
                             of T.CPar :: rest''' =>
                                 let
-                                  val body_w_toks = nextStatement rest'''
+                                  val (body, toks) = nextStatement rest'''
                                 in
-                                  (case body_w_toks
-                                    of (body, toks) =>
-                                      (AST.ForDecl (decl, AST.Const 1,
-                                       NONE, body), toks)
-                                  )
+                                  (AST.ForDecl (decl, AST.Const 1, NONE, body),
+                                   toks)
                                 end
                               | _ =>
                                   let
@@ -606,15 +564,11 @@ structure Parse = struct
                                     (case exp2_w_r
                                        of (exp2, T.CPar :: rest''') =>
                                             let
-                                              val body_w_toks =
+                                              val (body, toks) =
                                                 nextStatement rest'''
                                             in
-                                              (case body_w_toks
-                                                 of (body, toks) =>
-                                                  (AST.ForDecl (decl,
-                                                   AST.Const 1, SOME
-                                                   exp2, body), toks)
-                                              )
+                                              (AST.ForDecl (decl, AST.Const 1,
+                                               SOME exp2, body), toks)
                                             end
                                          | _ => raise Fail ("for loop" ^
                                          "missing )")
@@ -630,14 +584,11 @@ structure Parse = struct
                                      (case rest''
                                         of (T.CPar :: rest''') =>
                                           let
-                                            val body_w_toks =
+                                            val (body, toks) =
                                               nextStatement rest'''
                                           in
-                                            (case body_w_toks
-                                              of (body, toks) =>
-                                                (AST.ForDecl (decl, exp1,
-                                                NONE, body), toks)
-                                            )
+                                            (AST.ForDecl (decl, exp1, NONE,
+                                             body), toks)
                                           end
                                          | _ =>
                                             let
@@ -648,16 +599,12 @@ structure Parse = struct
                                                  of (exp2, T.CPar ::
                                                  rest''') =>
                                                  let
-                                                   val body_w_toks =
+                                                   val (body, toks) =
                                                      nextStatement
                                                      rest'''
                                                  in
-                                                   (case body_w_toks
-                                                    of (body, toks) =>
-                                                      (AST.ForDecl (decl,
-                                                      exp1, SOME exp2,
-                                                      body), toks)
-                                                   )
+                                                  (AST.ForDecl (decl, exp1, SOME
+                                                  exp2, body), toks)
                                                  end
                                                  | _ => raise Fail
                                                  "for loop missing )"
@@ -676,13 +623,10 @@ structure Parse = struct
                            (case rest''
                             of T.CPar :: rest''' =>
                                 let
-                                  val body_w_toks = nextStatement rest'''
+                                  val (body, toks) = nextStatement rest'''
                                 in
-                                  (case body_w_toks
-                                    of (body, toks) =>
-                                      (AST.For (exp_option, AST.Const 1,
-                                       NONE, body), toks)
-                                  )
+                                  (AST.For (exp_option, AST.Const 1, NONE,
+                                   body), toks)
                                 end
                               | _ =>
                                   let
@@ -691,15 +635,11 @@ structure Parse = struct
                                     (case exp2_w_r
                                        of (exp2, T.CPar :: rest''') =>
                                             let
-                                              val body_w_toks =
+                                              val (body, toks) =
                                                 nextStatement rest'''
                                             in
-                                              (case body_w_toks
-                                                 of (body, toks) =>
-                                                  (AST.For (exp_option,
-                                                   AST.Const 1, SOME
-                                                   exp2, body), toks)
-                                              )
+                                              (AST.For (exp_option, AST.Const 1,
+                                               SOME exp2, body), toks)
                                             end
                                          | _ => raise Fail ("for loop" ^
                                          "missing )")
@@ -715,14 +655,11 @@ structure Parse = struct
                                      (case rest''
                                         of (T.CPar :: rest''') =>
                                           let
-                                            val body_w_toks =
+                                            val (body, toks) =
                                               nextStatement rest'''
                                           in
-                                            (case body_w_toks
-                                              of (body, toks) =>
-                                                (AST.For (exp_option, exp1,
-                                                NONE, body), toks)
-                                            )
+                                            (AST.For (exp_option, exp1, NONE,
+                                             body), toks)
                                           end
                                          | _ =>
                                             let
@@ -733,17 +670,12 @@ structure Parse = struct
                                                  of (exp2, T.CPar ::
                                                  rest''') =>
                                                  let
-                                                   val body_w_toks =
+                                                   val (body, toks) =
                                                      nextStatement
                                                      rest'''
                                                  in
-                                                   (case body_w_toks
-                                                    of (body, toks) =>
-                                                      (AST.For
-                                                      (exp_option,
-                                                      exp1, SOME exp2,
-                                                      body), toks)
-                                                   )
+                                                  (AST.For (exp_option, exp1,
+                                                   SOME exp2, body), toks)
                                                  end
                                                  | _ => raise Fail
                                                  "for loop missing )"

@@ -1,0 +1,227 @@
+structure TypeCheck : sig
+  type fnInfo
+  type fnStore
+  val arg_eq : (AST.typ list) * (AST.typ list) -> bool
+  val validate : AST.prog * fnStore -> unit
+end = struct
+  (*Name, parameter types, return type, defined or not *)
+  type tlist = AST.typ list
+  type fnInfo = string * ((string * AST.typ) list) * AST.typ * bool
+  type fnStore = fnInfo list
+
+  fun type_exp (exp_w_env : AST.exp * (string * AST.typ list)) =
+    AST.Int
+
+  fun arg_eq (args : (AST.typ list) * (AST.typ list)) =
+    (case args
+      of ([], []) => true
+        | (a1 :: rest1, a2 :: rest2) =>
+            a1 = a2 andalso arg_eq (rest1, rest2)
+        | _ => false
+    )
+  fun find_fn (name_w_info : string * fnStore) : fnInfo =
+    let
+      val (name, infos) = name_w_info
+    in
+      (case infos
+         of [] => raise Fail "Calling undeclared function"
+          | info :: rest =>
+            let
+              val (fn_name, _, _, _) = info
+            in
+              if fn_name = name then info else
+                find_fn (name, rest)
+            end
+      )
+    end
+  fun validate (prog_w_decls : AST.prog * fnStore) : unit =
+    let
+      fun validate_exp (exp_w_decls : AST.exp * fnStore) : unit =
+        let
+          val (exp, declared_fns) = exp_w_decls
+        in
+          (case exp
+             of AST.UnOp (_, exp1) => validate_exp (exp1, declared_fns)
+              | AST.Conditional (exp1, exp2, exp3) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_exp (exp3, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.BinOp (_, exp1, exp2) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_exp (exp2, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.Assign (vname, exp1) => validate_exp (exp1, declared_fns)
+              | AST.Const _ => ()
+              | AST.Var _ => ()
+              | AST.FunCall (name, args) =>
+                  let
+                    val (_, arg_types, _, _) = find_fn (name, declared_fns)
+                  in
+                    if length arg_types = length args then () else
+                      raise Fail "function called with incorrect number of args"
+                  end
+          )
+        end
+      and validate_statement (stm_w_decls : AST.statement * fnStore) : unit =
+        let
+          val (stm, declared_fns) = stm_w_decls
+        in
+          (case stm
+             of AST.Return exp => validate_exp (exp, declared_fns)
+              | AST.Exp (SOME exp) => validate_exp (exp, declared_fns)
+              | AST.Exp NONE => ()
+              | AST.Compound block_items => validate_block_items (block_items,
+                declared_fns)
+              | AST.If (exp1, stm1, NONE) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.If (exp1, stm1, SOME stm2) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                    val _ = validate_statement (stm2, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.For (NONE, exp2, NONE, stm1) =>
+                  let
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.For (SOME exp1, exp2, NONE, stm1) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.For (NONE, exp2, SOME exp3, stm1) =>
+                  let
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_exp (exp3, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.For (SOME exp1, exp2, SOME exp3, stm1) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_exp (exp3, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.ForDecl (AST.Declare (_, _, SOME exp1), exp2, SOME exp3, stm1) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_exp (exp3, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.ForDecl (AST.Declare (_, _, NONE), exp2, SOME exp3, stm1) =>
+                  let
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_exp (exp3, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.ForDecl (AST.Declare (_, _, SOME exp1), exp2, NONE, stm1) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.ForDecl (AST.Declare (_, _, NONE), exp2, NONE, stm1) =>
+                  let
+                    val _ = validate_exp (exp2, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.While (exp1, stm1) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.Do (stm1, exp1) =>
+                  let
+                    val _ = validate_exp (exp1, declared_fns)
+                    val _ = validate_statement (stm1, declared_fns)
+                  in
+                    ()
+                  end
+              | AST.Break => ()
+              | AST.Continue => ()
+
+          )
+        end
+      and validate_block_item (blitm_w_decls : AST.block_item * fnStore) : unit =
+        let
+          val (item, declared_fns) = blitm_w_decls
+        in
+          (case item
+             of AST.Statement stm => validate_statement (stm, declared_fns)
+              | AST.Declaration decl =>
+                  (case decl
+                     of AST.Declare (ty, vname, SOME exp) => validate_exp (exp,
+                     declared_fns)
+                      | _ => ()
+                  )
+          )
+        end
+      and validate_block_items (items_w_decls : AST.block_item list * fnStore) :
+        unit =
+        (case items_w_decls
+           of ([], declared_fns) => ()
+            | (item :: rest, declared_fns) =>
+                let
+                  val _ = validate_block_item (item, declared_fns)
+                in
+                  validate_block_items (rest, declared_fns)
+                end
+        )
+      val (prog, declared_fns) = prog_w_decls
+    in
+      (case prog
+        of AST.Prog func_decls =>
+          (case func_decls
+            of (AST.Fun (name, arg_types, NONE, ret_type) :: rest) =>
+              validate (AST.Prog rest, (name, arg_types, ret_type, false) ::
+              declared_fns)
+             | (AST.Fun (name, arg_types, SOME body, ret_type) :: rest) =>
+              let
+                val new_decls = (name, arg_types, ret_type, false) ::
+                declared_fns
+                (*TODO: Make sure to also check if function is already declared*)
+              in
+                validate_block_items (body, new_decls)
+              end
+             | [] => ()
+          )
+      )
+    end
+
+end
+  
