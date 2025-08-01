@@ -4,7 +4,7 @@ structure TypeCheck : sig
   val arg_eq : (AST.typ list) * (AST.typ list) -> bool
   val validate : AST.prog * fnStore -> unit
 end = struct
-  (*Name, parameter types, return type, defined or not *)
+  (*Name, parameter types, return type, defined or only declared *)
   type tlist = AST.typ list
   type fnInfo = string * ((string * AST.typ) list) * AST.typ * bool
   type fnStore = fnInfo list
@@ -19,17 +19,17 @@ end = struct
             a1 = a2 andalso arg_eq (rest1, rest2)
         | _ => false
     )
-  fun find_fn (name_w_info : string * fnStore) : fnInfo =
+  fun find_fn (name_w_info : string * fnStore) : fnInfo option =
     let
       val (name, infos) = name_w_info
     in
       (case infos
-         of [] => raise Fail "Calling undeclared function"
+         of [] => NONE
           | info :: rest =>
             let
               val (fn_name, _, _, _) = info
             in
-              if fn_name = name then info else
+              if fn_name = name then SOME info else
                 find_fn (name, rest)
             end
       )
@@ -62,10 +62,14 @@ end = struct
               | AST.Var _ => ()
               | AST.FunCall (name, args) =>
                   let
-                    val (_, arg_types, _, _) = find_fn (name, declared_fns)
+                    val found_info = find_fn (name, declared_fns)
                   in
-                    if length arg_types = length args then () else
-                      raise Fail "function called with incorrect number of args"
+                    (case found_info
+                       of NONE => raise Fail "Calling undeclared function"
+                        | SOME (_, arg_types, _, _) =>
+                        if length arg_types = length args then () else
+                          raise Fail "function called with incorrect number of args"
+                    )
                   end
           )
         end
@@ -214,9 +218,26 @@ end = struct
               let
                 val new_decls = (name, arg_types, ret_type, false) ::
                 declared_fns
-                (*TODO: Make sure to also check if function is already declared*)
+                val found_info = find_fn (name, declared_fns)
+                (*TODO: Removing the old function from list also probably good, but
+                 this works fine *)
               in
-                validate_block_items (body, new_decls)
+                (case found_info
+                  of NONE =>
+                       let
+                         val _ = validate_block_items (body, new_decls)
+                       in
+                         validate (AST.Prog rest, new_decls)
+                       end
+                    | SOME (_, _, _, false) =>
+                       let
+                         val _ = validate_block_items (body, new_decls)
+                       in
+                         validate (AST.Prog rest, new_decls)
+                       end
+                    | SOME (_, _, _, true) =>
+                        raise Fail "Redefining declared function"
+                )
               end
              | [] => ()
           )

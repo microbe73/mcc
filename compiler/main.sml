@@ -1,4 +1,8 @@
-structure Main = struct
+structure Main : sig
+  val fstring : TextIO.instream -> string
+  val compile : string * string -> unit
+  val main : string * string list -> OS.Process.status
+end = struct
 
   fun fstring (strm : TextIO.instream) : string =
     let
