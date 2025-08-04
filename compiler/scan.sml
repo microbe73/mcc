@@ -12,7 +12,6 @@ structure Scan = struct
     len
   fun scan (s : string) : Token.token * string =
         let
-        
         val regexes = [
           ("{",                   fn match => matched Token.OBrac match),
           ("}",                   fn match => matched Token.CBrac match),
@@ -69,7 +68,7 @@ structure Scan = struct
          * depends on your implementation above, in the match functions.
          *)
          (case match_result
-            of NONE => raise Fail "Syntax error, unable to scan"
+            of NONE => raise Fail "Syntax error, unable to scan token"
              | SOME (token, result_root) =>
                  let
                    val result = MatchTree.root (result_root)

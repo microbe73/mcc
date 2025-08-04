@@ -23,7 +23,7 @@ end = struct
       val vpmap = #2(inp)
     in
       (case vpmap
-         of [] => raise Fail "variable used but not in map"
+         of [] => raise Fail ("variable `"^ name ^ "` used but not declared")
           | (s :: rest) =>
           (case s
             of (var, info) => if var = name then info else find (name, rest)

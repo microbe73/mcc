@@ -27,8 +27,9 @@ structure Parse = struct
                               (AST.Fun (fname, args, SOME body, (type_token t)),
                               new_toks2)
                             end
-                        | _ => raise Fail "Invalid function declaration"
-                     )
+                        | _ => raise Fail ("Invalid function declaration `" ^
+                        fname ^ "` (does not end with either ; or {)")
+                      )
                    end
             | _ => raise Fail "Parse error, unable to find function declaration"
 
@@ -48,7 +49,9 @@ structure Parse = struct
                           nextArgs (new_args, rest')
                        | T.CPar :: rest' =>
                            (new_args, rest')
-                       | _ => raise Fail "error while parsing function argument"
+                       | _ => raise Fail
+                       ("error while parsing function declaration argument`" ^
+                       argname ^ "` (missing ')' or ',')")
                    )
                  end
              | T.CPar :: rest => ([], rest)
@@ -307,7 +310,10 @@ structure Parse = struct
                         nextCallArgs (args @ [exp], rest)
                         | T.CPar :: rest =>
                             (args @ [exp], rest)
-                        | _ => raise Fail "error parsing function call args"
+                        | tok :: rest => raise Fail ("error parsing function call args. " ^
+                        "Expected ',' or ')', found " ^ T.toString tok)
+                        | [] => raise Fail ("error parsing function call args" ^
+                        "(found EOF instead)")
                     )
                   end
           )
@@ -385,7 +391,7 @@ structure Parse = struct
                         (case toks'
                           of T.CPar :: toks =>
                             (AST.Do (statement, exp), toks)
-                           | _ => raise Fail "While cond missing )"
+                           | _ => raise Fail "Do cond missing )"
                         )
                       end
                       | _ => raise Fail "Do statement unterminated"
@@ -433,7 +439,8 @@ structure Parse = struct
                                 )
                               end
                             | _ => raise Fail 
-                            "Parse error, variable declaration invalid"
+                            ("Parse error, variable`" ^ s ^
+                            "` declaration invalid")
                         )
                         | _ => raise Fail "Dangling int keyword"
                     )

@@ -279,11 +279,23 @@ structure Generate = struct
          post_cond ^ ":\n"
         end
         | AST.FunCall (name, arglist) =>
-            genFunCall arglist
+            genFunCall (rev arglist, ctxt) ^ "\n" ^
+            "    call _" ^ name ^ "\n" ^
+            "    addq $" ^ Int.toString (length arglist) ^ ", %rsp\n"
+
      )
   )
-  and genFunCall (args : AST.exp list) : string =
-    ""
+  and genFunCall (args_w_ctxt : AST.exp list * VM.pmap) : string =
+    (case args_w_ctxt
+       of ([], ctxt) => ""
+        | ((arg :: rest), ctxt) =>
+            let
+              val exp_str = genExp (arg, ctxt)
+            in
+              exp_str ^ "\n" ^
+              "    pushq %rax\n"
+            end
+    )
   and genStatement  (b : AST.statement * context) : string =
     (case b
        of (AST.Return exp, {break_label = bl, continue_label = cl, var_map =
