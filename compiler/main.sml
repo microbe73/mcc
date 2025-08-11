@@ -21,6 +21,7 @@ end = struct
       val w = fstring instream
       val x = Scan.scan_toks w
       val y = Parse.progAST x
+      val toplevel = TypeCheck.validate (AST.Prog y, TypeCheck.empty_store)
       val z = Generate.generate y
       val outstream = TextIO.openOut outfile
       val _ = TextIO.output (outstream, z)

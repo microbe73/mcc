@@ -3,11 +3,13 @@ structure TypeCheck : sig
   type fnStore
   val arg_eq : (AST.typ list) * (AST.typ list) -> bool
   val validate : AST.prog * fnStore -> fnStore
+  val empty_store : fnStore
 end = struct
   (*Name, parameter types, return type, defined or only declared *)
   type tlist = AST.typ list
   type fnInfo = string * ((string * AST.typ) list) * AST.typ * bool
   type fnStore = fnInfo list
+  val empty_store = []
 
   fun type_exp (exp_w_env : AST.exp * (string * AST.typ list)) =
     AST.Int

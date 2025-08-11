@@ -1,17 +1,22 @@
 structure VarMap : sig
 
   type pmap
-  type var_info
+  datatype var_info
+    = Offset of int
+    | Register of string
   val empty_map : pmap
 
   val find   : string * pmap -> var_info (* find value in map *)
   val contains : string * pmap -> bool (* check if value is in map *)
-  val ins   : (string * var_info) * pmap -> pmap  (* add value to map *)                          
   val rem   : string * pmap -> pmap  (* remove value from map *)
   val vsize : pmap -> int
+  val ins : (string * var_info) * pmap -> pmap
 end = struct
 
-  type var_info = int
+  datatype var_info
+    = Offset of int
+    | Register of string
+
 
   type pmap = (string * var_info) list
 
@@ -45,6 +50,7 @@ end = struct
           )
       )
     end
+
   fun ins (inp : (string * var_info) * pmap) : pmap =
     let
       val name_w_info = #1(inp)

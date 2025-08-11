@@ -12,7 +12,7 @@ structure Generate = struct
 
 
   val count = ref 0
-  fun incr (a : unit) : int =
+  fun incr (_ : unit) : int =
     let val _ = count := !count + 1 in !count end
 
   fun new_label (a : unit) : string =
@@ -31,21 +31,15 @@ structure Generate = struct
           | AST.UnOp (unop, inner_exp) =>
               (case unop
                  of AST.Negation =>
-                    (case genExp (inner_exp, ctxt)
-                      of new_exp  =>
-                        new_exp ^ "    neg  %rax\n"
-                    )
+                    genExp (inner_exp, ctxt)
+                    ^ "    neg  %rax\n"
                   | AST.Complement =>
-                    (case genExp (inner_exp, ctxt)
-                      of new_exp  =>
-                        new_exp ^ "    not  %rax\n"
-                    )
+                    genExp (inner_exp, ctxt)
+                    ^ "    not  %rax\n"
                   | AST.Not =>
-                    (case genExp (inner_exp, ctxt)
-                      of new_exp  =>
-                        new_exp ^ "    cmpq  $0, %rax\n" ^
-                      "    movq  $0, %rax\n" ^ "\tsete  %al\n"
-                    )
+                    genExp (inner_exp, ctxt)
+                    ^ "    cmpq  $0, %rax\n" ^
+                      "    movq  $0, %rax\n" ^ "    sete  %al\n"
                )
           | AST.BinOp (binop, e1, e2) =>
             (case binop
@@ -55,7 +49,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
                exp1 ^ "    pushq %rax\n" ^ exp2 ^
-              "    popq %rcx\n" ^ "\tadd %rcx, %rax\n"
+              "    popq %rcx\n" ^ "    add %rcx, %rax\n"
               end
               | AST.Minus =>
               let
@@ -63,7 +57,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-              "    popq %rcx\n" ^ "\tsub %rax, %rcx\n" ^ "\tmovq %rcx, %rax\n"
+              "    popq %rcx\n" ^ "    sub %rax, %rcx\n" ^ "    movq %rcx, %rax\n"
               end
               | AST.Times =>
               let
@@ -71,7 +65,8 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-              "    popq %rcx\n" ^ "\timul %rcx, %rax\n"
+              "    popq %rcx\n" ^
+              "    imulq %rcx, %rax\n"
              end
               | AST.Div =>
               let
@@ -79,8 +74,8 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
-                ^ "    popq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n"
+                "    popq %rcx\n" ^ "    pushq %rax\n" ^ "    movq %rcx, %rax\n"
+                ^ "    popq %rcx\n" ^ "    cqo\n" ^ "    idiv %rcx\n"
              end
               | AST.OR =>
               let
@@ -131,7 +126,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+                "    popq %rcx\n" ^ "    cmpq %rax, %rcx\n" ^ "    movq $0, %rax\n"
                 ^ "    sete %al\n"
              end
               | AST.Neq =>
@@ -140,7 +135,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+                "    popq %rcx\n" ^ "    cmpq %rax, %rcx\n" ^ "    movq $0, %rax\n"
                 ^ "    setne %al\n"
              end
               | AST.Leq =>
@@ -149,7 +144,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+                "    popq %rcx\n" ^ "    cmpq %rax, %rcx\n" ^ "    movq $0, %rax\n"
                 ^ "    setle %al\n"
              end
               | AST.Geq =>
@@ -158,7 +153,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+                "    popq %rcx\n" ^ "    cmpq %rax, %rcx\n" ^ "    movq $0, %rax\n"
                 ^ "    setge %al\n"
              end
               | AST.Gt =>
@@ -167,7 +162,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+                "    popq %rcx\n" ^ "    cmpq %rax, %rcx\n" ^ "    movq $0, %rax\n"
                 ^ "    setg %al\n"
              end
               | AST.Lt =>
@@ -176,7 +171,7 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tcmpq %rax, %rcx\n" ^ "\tmovq $0, %rax\n"
+                "    popq %rcx\n" ^ "    cmpq %rax, %rcx\n" ^ "    movq $0, %rax\n"
                 ^ "    setl %al\n"
              end
               | AST.BAnd =>
@@ -241,9 +236,15 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushq %rax\n" ^ exp2 ^
-                "    popq %rcx\n" ^ "\tpushq %rax\n" ^ "\tmovq %rcx, %rax\n"
-                ^ "    popq %rcx\n" ^ "\tcqo\n" ^ "\tidiv %rcx\n" ^
+                exp1 ^
+                "    pushq %rax\n" ^
+                exp2 ^
+                "    popq %rcx\n" ^
+                "    pushq %rax\n" ^
+                "    movq %rcx, %rax\n" ^
+                "    popq %rcx\n" ^
+                "    cqo\n" ^
+                "    idiv %rcx\n" ^
                 "    movq %rdx, %rax\n"
               end
              )
@@ -251,15 +252,26 @@ structure Generate = struct
           let
             val voffset = VM.find (s, ctxt)
           in
-            "    movq " ^ Int.toString voffset ^ "(%rbp), %rax\n"
+            (case voffset
+               of VM.Offset n =>
+                "    movq " ^ Int.toString n ^ "(%rbp), %rax\n"
+                | VM.Register reg =>
+                "    movq " ^ reg ^ ", %rax\n"
+            )
           end
-       | AST.Assign (s, exp) =>
+       | AST.Assign (s, new_exp) =>
           let
-            val expstr = genExp (exp, ctxt)
+            val expstr = genExp (new_exp, ctxt)
             val voffset = VM.find (s, ctxt)
           in
-            expstr ^
-            "    movq %rax, " ^ Int.toString voffset ^ "(%rbp)\n"
+            (case voffset
+               of VM.Offset n =>
+                expstr ^
+                "    movq " ^ Int.toString n ^ "(%rbp), %rax\n"
+                | VM.Register reg =>
+                expstr ^
+                "    movq " ^ reg ^ ", %rax\n"
+            )
           end
        | AST.Conditional (e1, e2, e3) =>
         let
@@ -279,39 +291,65 @@ structure Generate = struct
          post_cond ^ ":\n"
         end
         | AST.FunCall (name, arglist) =>
-            genFunCall (rev arglist, ctxt) ^ "\n" ^
-            "    call _" ^ name ^ "\n" ^
-            "    addq $" ^ Int.toString (length arglist) ^ ", %rsp\n"
+            let
+              val bytes_to_add = if length arglist > 6 
+                                 then
+                                   8 * ((length arglist) - 6)
+                                 else
+                                   0
+            in
+              genFunCall (arglist, ctxt, 1) ^ "\n" ^
+              "    call _" ^ name ^ "\n" ^
+              "    addq $" ^ Int.toString bytes_to_add ^ ", %rsp\n"
+            end
 
      )
   )
-  and genFunCall (args_w_ctxt : AST.exp list * VM.pmap) : string =
+  and genFunCall (args_w_ctxt : AST.exp list * VM.pmap * int) : string =
     (case args_w_ctxt
-       of ([], ctxt) => ""
-        | ((arg :: rest), ctxt) =>
+       of ([], _, _) => ""
+        | ((arg :: rest), ctxt, n) =>
             let
               val exp_str = genExp (arg, ctxt)
             in
-              exp_str ^ "\n" ^
-              "    pushq %rax\n"
+              if n < 6 then
+                exp_str ^
+                "    movq %rax," ^ nextReg n ^ "\n" ^
+                genFunCall (rest, ctxt, n + 1)
+              else if n = 6 then
+                exp_str ^
+                "    movq %rax," ^ nextReg n ^ "\n" ^
+                genFunCall (rev rest, ctxt, n + 1)
+              else
+                exp_str ^
+                "    pushq %rax\n" ^
+                genFunCall (rest, ctxt, n + 1)
             end
+    )
+  and nextReg (n : int) : string =
+    (case n
+       of 1 => "%rdi"
+        | 2 => "%rsi"
+        | 3 => "%rdx"
+        | 4 => "%rcx"
+        | 5 => "%r8"
+        | 6 => "%r9"
+        | _ => raise Fail "out of registers"
     )
   and genStatement  (b : AST.statement * context) : string =
     (case b
-       of (AST.Return exp, {break_label = bl, continue_label = cl, var_map =
-       vmap, current_scope = cs, offset = n}) =>
+       of (AST.Return exp, {break_label = _, continue_label = _, var_map = _,
+       current_scope = cs, offset = _}) =>
             let
               val exp = genExp (exp, cs)
-              val ctxt = {break_label = bl, continue_label = cl, var_map =
-                vmap, current_scope = cs, offset = n}
             in
             exp ^
              "    movq %rbp, %rsp\n" ^
              "    popq %rbp\n" ^
              "    retq\n"
            end
-     | (AST.Exp exp_option, {break_label = bl, continue_label = cl, var_map =
-     vmap, current_scope = cs, offset = n}) =>
+     | (AST.Exp exp_option, {break_label = _, continue_label = _, var_map =
+     vmap, current_scope = _, offset = _}) =>
          (case exp_option
             of NONE => ""
              | SOME exp => genExp (exp, vmap)
@@ -354,7 +392,7 @@ structure Generate = struct
     | (AST.Compound block_items, init_ctxt) =>
       genBlock (block_items, init_ctxt)
 
-    | (AST.While (exp, statement), {break_label = bl, continue_label = cl,
+    | (AST.While (exp, statement), {break_label = _, continue_label = _,
        var_map = vmap, current_scope = cs, offset = n}) =>
         let
           val precond_label = new_label()
@@ -372,7 +410,7 @@ structure Generate = struct
           "    jmp " ^ precond_label ^ "\n" ^
           post_label ^ ":\n"
         end
-    | (AST.Do (statement, exp), {break_label = bl, continue_label = cl,
+    | (AST.Do (statement, exp), {break_label = _, continue_label = _,
        var_map = vmap, current_scope = cs, offset = n}) =>
         let
           val precond_label = new_label()
@@ -389,14 +427,14 @@ structure Generate = struct
           "    jne " ^ precond_label ^ "\n" ^
           post_label ^ ":\n"
         end
-    | (AST.Break, {break_label = bl, continue_label = cl, var_map = vmap,
-       current_scope = cs, offset = n}) =>
+    | (AST.Break, {break_label = bl, continue_label = _, var_map = _,
+       current_scope = _, offset = _}) =>
        (case bl
           of NONE => raise Fail "Break outside of loop body"
            | SOME lbl => "    jmp " ^ lbl
        )
-    | (AST.Continue, {break_label = bl, continue_label = cl, var_map = vmap,
-       current_scope = cs, offset = n}) =>
+    | (AST.Continue, {break_label = _, continue_label = cl, var_map = _,
+       current_scope = _, offset = _}) =>
        (case cl
           of NONE => raise Fail "Continue outside of loop body"
            | SOME lbl => "    jmp " ^ lbl
@@ -422,7 +460,7 @@ structure Generate = struct
          "    je " ^ end_label ^ "\n" ^
          loop_body ^
          exp3str ^
-         "    jmp" ^ end_label ^ "\n" ^
+         "    jmp " ^ end_label ^ "\n" ^
          end_label ^ ":\n"
        end
      | (AST.ForDecl (decl, exp2, exp3, body), ctxt) =>
@@ -446,7 +484,7 @@ structure Generate = struct
          "    je " ^ end_label ^ "\n" ^
          loop_body ^
          exp3str ^
-         "    jmp" ^ end_label ^ "\n" ^
+         "    jmp " ^ end_label ^ "\n" ^
          end_label ^ ":\n"
        end
     )
@@ -472,8 +510,8 @@ structure Generate = struct
             of (SOME exp) =>
                   let
                     val new_exp = genExp (exp, vmap)
-                    val new_map = VM.ins ((name, off), vmap)
-                    val new_current = VM.ins ((name, off), cs)
+                    val new_map = VM.ins ((name, VM.Offset off), vmap)
+                    val new_current = VM.ins ((name, VM.Offset off), cs)
                   in
                     (new_exp ^
                     "    pushq %rax\n", {break_label = bl, continue_label = cl,
@@ -482,8 +520,8 @@ structure Generate = struct
                   end
             | NONE =>
               let
-                val new_map = VM.ins ((name, off), vmap)
-                val new_current = VM.ins ((name, off), cs)
+                val new_map = VM.ins ((name, VM.Offset off), vmap)
+                val new_current = VM.ins ((name, VM.Offset off), cs)
               in
                 ("    pushq $0\n", {break_label = bl, continue_label = cl,
                    var_map = new_map, offset = off, current_scope = new_current})
@@ -502,8 +540,8 @@ structure Generate = struct
 
   and genBlock (b : (AST.block_item list) * context) : string =
       (case b
-         of ([], {break_label = bl, continue_label = cl,
-           var_map = vmap, current_scope = cs, offset = n}) =>
+         of ([], {break_label = _, continue_label = _,
+           var_map = _, current_scope = cs, offset = _}) =>
                "    addq $" ^ Int.toString (VM.vsize cs) ^ ", %rsp\n"
           | ((bitem :: rest), init_ctxt) =>
           let
@@ -512,20 +550,44 @@ structure Generate = struct
             bitem ^ genBlock (rest, new_ctxt)
           end
       )
+  and genFunMap (args_w_count : (string * AST.typ) list * int) : VM.pmap  =
+    (case args_w_count
+       of ([], _) => []
+        | ((name, vartype) :: rest, n) =>
+            let
+            in
+              if n < 6 then
+                (name, VM.Register (nextReg n)) :: genFunMap (rest, n + 1)
+              else if n = 6 then
+                (name, VM.Register (nextReg n)) :: genFunMap (rev rest, n + 1)
+              else
+                (name, VM.Offset (8 * (n - 6))) :: genFunMap (rest, n + 1)
+            end
+    )
   in
     (case prog
        of [] => ""
         | (fnc :: rest) =>
           (case fnc
              of AST.Fun (name, arglist, SOME body, ret_type)  =>
-                   "    .globl _" ^ name ^ "\n" ^
-                   "_" ^ name ^ ":\n" ^
-                   "    pushq %rbp\n" ^
-                   "    movq %rsp, %rbp\n" ^
-                   genBlock (body, fresh_context) ^
-                   generate rest
-              | AST.Fun (name, arglist, NONE, ret_type) =>
-                  ""
+                  let
+                    val base_map = genFunMap (arglist, 1)
+                    val n = length arglist
+                    val off = if n >= 7 then 8 * (n - 6) else 0
+                    val base_context = {break_label=NONE, continue_label=NONE,
+                    var_map=base_map, offset=off, current_scope=base_map}
+                  in
+                     "    .globl _" ^ name ^ "\n" ^
+                     "_" ^ name ^ ":\n" ^
+                     "    pushq %rbp\n" ^
+                     "    movq %rsp, %rbp\n" ^
+                     genBlock (body, base_context) ^
+                     "    movq %rbp, %rsp\n" ^
+                     "    popq %rbp\n" ^
+                     generate rest
+                    end
+              | AST.Fun (_, _, NONE, _) =>
+                  "" ^ generate rest
           )
     )
   end
