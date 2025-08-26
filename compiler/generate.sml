@@ -298,7 +298,16 @@ structure Generate = struct
                                  else
                                    0
             in
+              (*"    movq %rsp, %rax\n" ^*)
+              (*"    subq $" ^ Int.toString (8 * (bytes_to_add + 1)) ^ ", %rax\n" ^*)
+              (*"    xorq %rdx, %rdx\n" ^*)
+              (*"    movq $0x20, %rcx\n" ^*)
+              (*"    idivq %rcx\n" ^*)
+              (*"    subq %rdx, %rsp\n" ^*)
+              (*"    pushq %rdx\n" ^*)
               genFunCall (arglist, ctxt, 1) ^ "\n" ^
+              (*"    popq %rdx\n" ^*)
+              (*"    addq %rdx, %rsp\n" ^*)
               "    call _" ^ name ^ "\n" ^
               "    addq $" ^ Int.toString bytes_to_add ^ ", %rsp\n"
             end
