@@ -563,22 +563,19 @@ structure Generate = struct
     (case args_w_count
        of ([], _) => []
         | ((name, vartype) :: rest, n) =>
-            let
-            in
-              if n < 6 then
-                (name, VM.Register (nextReg n)) :: genFunMap (rest, n + 1)
-              else if n = 6 then
-                (name, VM.Register (nextReg n)) :: genFunMap (rev rest, n + 1)
-              else
-                (name, VM.Offset (8 * (n - 6))) :: genFunMap (rest, n + 1)
-            end
+            if n < 6 then
+              (name, VM.Register (nextReg n)) :: genFunMap (rest, n + 1)
+            else if n = 6 then
+              (name, VM.Register (nextReg n)) :: genFunMap (rev rest, n + 1)
+            else
+              (name, VM.Offset (8 * (n - 6))) :: genFunMap (rest, n + 1)
     )
   in
     (case prog
        of [] => ""
         | (fnc :: rest) =>
           (case fnc
-             of AST.Fun (name, arglist, SOME body, ret_type)  =>
+             of AST.Fun (name, arglist, SOME body, _)  =>
                   let
                     val base_map = genFunMap (arglist, 1)
                     val n = length arglist

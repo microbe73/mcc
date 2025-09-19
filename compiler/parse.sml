@@ -8,7 +8,7 @@ structure Parse = struct
       of T.Int => AST.Int
     )
 
-  fun progAST (tlist : Token.token list) : AST.func list =
+  fun progAST (all_toks : Token.token list) : AST.func list =
     let
       fun nextFun (tlist : Token.token list) : (AST.func * (Token.token list))
         =
@@ -109,7 +109,7 @@ structure Parse = struct
           )
         end
       and nextLOExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.OR :: rest) =>
             nextGenExp (term, rest, nextLAExp, AST.OR, nextLOExpHelper)
@@ -118,10 +118,10 @@ structure Parse = struct
 
       and nextLOExp (tlist : toklist) :
         AST.exp * toklist =
-        nextLOExpHelper (nextLAExp (tlist))
+        nextLOExpHelper (nextLAExp tlist)
 
       and nextLAExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.AND :: rest) =>
             nextGenExp (term, rest, nextBORExp, AST.AND, nextLAExpHelper)
@@ -130,10 +130,10 @@ structure Parse = struct
 
       and nextLAExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextLAExpHelper (nextBORExp (tlist))
+        nextLAExpHelper (nextBORExp tlist)
 
       and nextBORExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.BOr :: rest) =>
             nextGenExp (term, rest, nextBXORExp, AST.BOr, nextBORExpHelper)
@@ -142,10 +142,10 @@ structure Parse = struct
 
       and nextBORExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextBORExpHelper (nextBXORExp (tlist))
+        nextBORExpHelper (nextBXORExp tlist)
 
       and nextBXORExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.BXor :: rest) =>
             nextGenExp (term, rest, nextBANDExp, AST.BXor, nextBXORExpHelper)
@@ -154,7 +154,7 @@ structure Parse = struct
 
       and nextBXORExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextBXORExpHelper (nextBANDExp (tlist))
+        nextBXORExpHelper (nextBANDExp tlist)
 
       and nextBANDExpHelper (term_w_tlist : AST.exp * toklist) :
         AST.exp * (toklist) =
@@ -166,10 +166,10 @@ structure Parse = struct
 
       and nextBANDExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextBANDExpHelper (nextEQExp (tlist))
+        nextBANDExpHelper (nextEQExp tlist)
 
       and nextEQExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.Eq :: rest) =>
             nextGenExp (term, rest, nextRELExp, AST.Eq, nextEQExpHelper)
@@ -180,10 +180,10 @@ structure Parse = struct
 
       and nextEQExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextEQExpHelper (nextRELExp (tlist))
+        nextEQExpHelper (nextRELExp tlist)
 
       and nextRELExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.Lt :: rest) =>
             nextGenExp (term, rest, nextBSExp, AST.Lt, nextRELExpHelper)
@@ -198,10 +198,10 @@ structure Parse = struct
 
       and nextRELExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextRELExpHelper (nextBSExp (tlist))
+        nextRELExpHelper (nextBSExp tlist)
 
       and nextBSExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.BLeft :: rest) =>
             nextGenExp (term, rest, nextAExp, AST.BLeft, nextBSExpHelper)
@@ -212,10 +212,10 @@ structure Parse = struct
 
       and nextBSExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextBSExpHelper (nextAExp (tlist))
+        nextBSExpHelper (nextAExp tlist)
 
       and nextAExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.Plus :: rest) =>
             nextGenExp (term, rest, nextTerm, AST.Plus, nextAExpHelper)
@@ -226,7 +226,7 @@ structure Parse = struct
 
       and nextAExp (tlist : Token.token list) :
         AST.exp * toklist =
-        nextAExpHelper (nextTerm (tlist))
+        nextAExpHelper (nextTerm tlist)
 
       and nextTermHelper (factor_w_tlist :  AST.exp * toklist) :
            (AST.exp * toklist) =
@@ -242,7 +242,7 @@ structure Parse = struct
 
       and nextTerm (tlist : Token.token list):
            (AST.exp * toklist) =
-         nextTermHelper (nextFactor (tlist))
+         nextTermHelper (nextFactor tlist)
 
       and nextFactor (tlist : Token.token list) :
             (AST.exp * toklist) =
@@ -289,7 +289,7 @@ structure Parse = struct
                       (AST.FunCall (fname, call_args), new_toks)
                     end
                 | (T.Identifier s :: rest) => (AST.Var s, rest)
-                | (T.Semcol :: rest) => raise Fail "Parsing ;"
+                | (T.Semcol :: _) => raise Fail "Parsing ;"
                 | _ => raise Fail
                 ("Parse error, could not parse factor " ^
                 T.toString (List.hd tlist))
@@ -310,7 +310,7 @@ structure Parse = struct
                         nextCallArgs (args @ [exp], rest)
                         | T.CPar :: rest =>
                             (args @ [exp], rest)
-                        | tok :: rest => raise Fail ("error parsing function call args. " ^
+                        | tok :: _ => raise Fail ("error parsing function call args. " ^
                         "Expected ',' or ')', found " ^ T.toString tok)
                         | [] => raise Fail ("error parsing function call args" ^
                         "(found EOF instead)")
@@ -699,11 +699,11 @@ structure Parse = struct
             end
           )
     in
-      (case tlist
+      (case all_toks
         of [] => []
           | _ =>
               let
-                val next_fun_w_rest = nextFun tlist
+                val next_fun_w_rest = nextFun all_toks
               in
                 (case next_fun_w_rest
                    of (func, rest) => func :: (progAST rest)
