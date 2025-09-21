@@ -53,3 +53,5 @@ dkms.conf
 
 # SML CM dotfiles
 .cm/
+# SML ml-build output
+*.amd64-darwin
