@@ -410,7 +410,7 @@ structure Generate = struct
           val post_label = new_label()
           val control_exp = genExp (exp, vmap)
           val loop_body = genStatement (statement,
-          {break_label = SOME precond_label, continue_label = SOME post_label,
+          {break_label = SOME post_label, continue_label = SOME precond_label,
            var_map = vmap, current_scope = cs, offset = n})
         in
           precond_label ^ ":\n" ^
@@ -428,7 +428,7 @@ structure Generate = struct
           val post_label = new_label()
           val control_exp = genExp (exp, vmap)
           val loop_body = genStatement (statement,{break_label = SOME
-          precond_label, continue_label = SOME post_label, var_map = vmap,
+          post_label, continue_label = SOME precond_label, var_map = vmap,
           current_scope = cs, offset = n})
         in
           precond_label ^ ":\n" ^
@@ -442,13 +442,13 @@ structure Generate = struct
        current_scope = _, offset = _}) =>
        (case bl
           of NONE => raise Fail "Break outside of loop body"
-           | SOME lbl => "    jmp " ^ lbl
+           | SOME lbl => "    jmp " ^ lbl ^ "\n"
        )
     | (AST.Continue, {break_label = _, continue_label = cl, var_map = _,
        current_scope = _, offset = _}) =>
        (case cl
           of NONE => raise Fail "Continue outside of loop body"
-           | SOME lbl => "    jmp " ^ lbl
+           | SOME lbl => "    jmp " ^ lbl ^ "\n"
        )
     | (AST.For (exp1, exp2, exp3, body), {break_label = bl, continue_label = cl,
        var_map = vmap, current_scope = cs, offset = n}) =>
