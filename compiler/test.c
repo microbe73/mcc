@@ -64,10 +64,17 @@ int main() {
     int r3 = 0;
     int x = 0;
     int n = 1;
-    while (n < 10){
+    int won = 0;
+    while (n < 10 && !won){
         x = drawBoard(r1, r2, r3);
         int input = getchar() - 48;
-        if (input <= 3){
+        if (input < 1){
+            putchar(input);
+            putchar(69);
+            putchar(10);
+            n = n - 1;
+        }
+        else if (input <= 3){
             r1 = r1 + updateRow(input, n % 2);
         }
         else if (input <= 6){
@@ -75,6 +82,12 @@ int main() {
         }
         else if (input <= 9){
             r3 = r3 + updateRow(input - 6, n % 2);
+        }
+        else{
+            putchar(input);
+            putchar(69);
+            putchar(10);
+            n = n - 1;
         }
         n = n + 1;
         int discard = getchar();

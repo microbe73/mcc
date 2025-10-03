@@ -335,13 +335,44 @@ _label17:
     pushq %rax
     movq -48(%rbp), %rax
     pushq %rax
+    movq $1, %rax
+    popq %rcx
+    cmpq %rax, %rcx
+    movq $0, %rax
+    setl %al
+    cmpq $0, %rax
+    je _label25
+    movq -48(%rbp), %rax
+    movq %rax,%rdi
+    callq _putchar
+    addq $0, %rsp
+    movq $69, %rax
+    movq %rax,%rdi
+    callq _putchar
+    addq $0, %rsp
+    movq $10, %rax
+    movq %rax,%rdi
+    callq _putchar
+    addq $0, %rsp
+    movq -40(%rbp), %rax
+    pushq %rax
+    movq $1, %rax
+    popq %rcx
+    sub %rax, %rcx
+    movq %rcx, %rax
+    movq %rax, -40(%rbp)
+    addq $0, %rsp
+    jmp _label26
+_label25:
+    movq -48(%rbp), %rax
+    pushq %rax
     movq $3, %rax
     popq %rcx
     cmpq %rax, %rcx
     movq $0, %rax
     setle %al
     cmpq $0, %rax
-    je _label22
+    je _label23
     movq -8(%rbp), %rax
     pushq %rax
     movq -48(%rbp), %rax
@@ -363,8 +394,8 @@ _label17:
     add %rcx, %rax
     movq %rax, -8(%rbp)
     addq $0, %rsp
-    jmp _label23
-_label22:
+    jmp _label24
+_label23:
     movq -48(%rbp), %rax
     pushq %rax
     movq $6, %rax
@@ -373,7 +404,7 @@ _label22:
     movq $0, %rax
     setle %al
     cmpq $0, %rax
-    je _label20
+    je _label21
     movq -16(%rbp), %rax
     pushq %rax
     movq -48(%rbp), %rax
@@ -400,8 +431,8 @@ _label22:
     add %rcx, %rax
     movq %rax, -16(%rbp)
     addq $0, %rsp
-    jmp _label21
-_label20:
+    jmp _label22
+_label21:
     movq -48(%rbp), %rax
     pushq %rax
     movq $9, %rax
@@ -437,9 +468,32 @@ _label20:
     add %rcx, %rax
     movq %rax, -24(%rbp)
     addq $0, %rsp
+    jmp _label20
 _label19:
-_label21:
-_label23:
+    movq -48(%rbp), %rax
+    movq %rax,%rdi
+    callq _putchar
+    addq $0, %rsp
+    movq $69, %rax
+    movq %rax,%rdi
+    callq _putchar
+    addq $0, %rsp
+    movq $10, %rax
+    movq %rax,%rdi
+    callq _putchar
+    addq $0, %rsp
+    movq -40(%rbp), %rax
+    pushq %rax
+    movq $1, %rax
+    popq %rcx
+    sub %rax, %rcx
+    movq %rcx, %rax
+    movq %rax, -40(%rbp)
+    addq $0, %rsp
+_label20:
+_label22:
+_label24:
+_label26:
     movq -40(%rbp), %rax
     pushq %rax
     movq $1, %rax
