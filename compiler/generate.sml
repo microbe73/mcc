@@ -600,7 +600,9 @@ structure Generate = struct
                   let
                     val base_map = genFunMap (arglist, 1)
                     val n = length arglist
-                    val off = foldl + 0 (map sizeOf arglist)
+                    val (arg_name, arg_types) = ListPair.unzip arglist
+                    val adder = fn (x : int * int) => #1(x) + #2(x)
+                    val off = foldl adder 0 (map sizeOf arg_types)
                     val base_context = {break_label=NONE, continue_label=NONE,
                     var_map=base_map, offset=off, current_scope=base_map}
                   in
