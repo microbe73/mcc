@@ -22,10 +22,23 @@ structure Generate = struct
     "_label" ^ Int.toString (!count)
   end
 
+  fun stack_offset (ctxt : VM.pmap * int) : int =
+    (case ctxt
+      of (vmap, n) =>
+      (case vmap
+        of ((name, VM.Register s):: rest) => stack_offset (rest, n)
+         | ((name, VM.Offset m) :: rest) =>
+         if m < n then stack_offset (rest, m) else stack_offset (rest, n)
+         | _ => n
+      )
+    )
   fun generate (prog : AST.func list) : string =
   let
   fun genExp (exp_w_context : AST.exp * VM.pmap) : string =
     (case exp_w_context of (exp, ctxt) =>
+    let
+      val off = stack_offset (ctxt, 0)
+    in
       (case exp
          of AST.Const n => "    movl $" ^ Int.toString n ^ ", %eax\n"
           | AST.UnOp (unop, inner_exp) =>
@@ -50,9 +63,9 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
                exp1 ^
-               "    pushl %eax\n" ^
+               "    push %eax\n" ^
                exp2 ^
-              "    popl %ecx\n" ^
+              "    pop %ecx\n" ^
               "    add %rcx, %rax\n"
               end
               | AST.Minus =>
@@ -61,9 +74,9 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^
-              "    pushl %eax\n" ^
+              "    push %eax\n" ^
               exp2 ^
-              "    popl %ecx\n" ^
+              "    pop %ecx\n" ^
               "    sub %eax, %ecx\n" ^
               "    movl %ecx, %eax\n"
               end
@@ -73,9 +86,9 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^
-              "    pushl %eax\n" ^
+              "    push %eax\n" ^
               exp2 ^
-              "    popl %ecx\n" ^
+              "    pop %ecx\n" ^
               "    imulq %rcx, %rax\n"
              end
               | AST.Div =>
@@ -84,12 +97,12 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^
-              "    pushl %eax\n" ^
+              "    push %eax\n" ^
               exp2 ^
-              "    popl %ecx\n" ^
-              "    pushl %eax\n" ^
+              "    pop %ecx\n" ^
+              "    push %eax\n" ^
               "    movl %ecx, %eax\n" ^
-              "    popl %ecx\n" ^
+              "    pop %ecx\n" ^
               "    cqo\n" ^
               "    idiv %ecx\n"
              end
@@ -131,7 +144,7 @@ structure Generate = struct
                  clause2 ^ ":\n" ^
                  exp2 ^
                  "    cmpl $0, %eax\n" ^
-                 "    movq $0, %eax\n" ^
+                 "    movl $0, %eax\n" ^
                  "    setne %al\n" ^
                  end_label ^ ":\n"
                 end
@@ -141,8 +154,8 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushl %eax\n" ^ exp2 ^
-                "    popl %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movq $0, %eax\n"
+              exp1 ^ "    push %eax\n" ^ exp2 ^
+                "    pop %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movl $0, %eax\n"
                 ^ "    sete %al\n"
              end
               | AST.Neq =>
@@ -150,8 +163,8 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushl %eax\n" ^ exp2 ^
-                "    popl %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movq $0, %eax\n"
+              exp1 ^ "    push %eax\n" ^ exp2 ^
+                "    pop %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movl $0, %eax\n"
                 ^ "    setne %al\n"
              end
               | AST.Leq =>
@@ -159,8 +172,8 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushl %eax\n" ^ exp2 ^
-                "    popl %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movq $0, %eax\n"
+              exp1 ^ "    push %eax\n" ^ exp2 ^
+                "    pop %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movl $0, %eax\n"
                 ^ "    setle %al\n"
              end
               | AST.Geq =>
@@ -168,8 +181,8 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushl %eax\n" ^ exp2 ^
-                "    popl %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movq $0, %eax\n"
+              exp1 ^ "    push %eax\n" ^ exp2 ^
+                "    pop %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movl $0, %eax\n"
                 ^ "    setge %al\n"
              end
               | AST.Gt =>
@@ -177,8 +190,8 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushl %eax\n" ^ exp2 ^
-                "    popl %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movq $0, %eax\n"
+              exp1 ^ "    push %eax\n" ^ exp2 ^
+                "    pop %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movl $0, %eax\n"
                 ^ "    setg %al\n"
              end
               | AST.Lt =>
@@ -186,8 +199,8 @@ structure Generate = struct
                 val exp1 = genExp (e1, ctxt)
                 val exp2 = genExp (e2, ctxt)
               in
-              exp1 ^ "    pushl %eax\n" ^ exp2 ^
-                "    popl %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movq $0, %eax\n"
+              exp1 ^ "    push %eax\n" ^ exp2 ^
+                "    pop %ecx\n" ^ "    cmpl %eax, %ecx\n" ^ "    movl $0, %eax\n"
                 ^ "    setl %al\n"
              end
               | AST.BAnd =>
@@ -196,9 +209,9 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
                exp1 ^
-               "    pushl %eax\n" ^
+               "    push %eax\n" ^
                exp2 ^
-               "    popl %ecx\n" ^
+               "    pop %ecx\n" ^
                "    and %ecx, %eax\n"
              end
               | AST.BOr =>
@@ -207,9 +220,9 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
                exp1 ^
-               "    pushl %eax\n" ^
+               "    push %eax\n" ^
                exp2 ^
-               "    popl %ecx\n" ^
+               "    pop %ecx\n" ^
                "    or %ecx, %eax\n"
              end
               | AST.BXor =>
@@ -218,9 +231,9 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^
-               "    pushl %eax\n" ^
+               "    push %eax\n" ^
                exp2 ^
-               "    popl %ecx\n" ^
+               "    pop %ecx\n" ^
                "    xor %ecx, %eax\n"
              end
               | AST.BLeft =>
@@ -229,10 +242,10 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^
-               "    pushl %eax\n" ^
+               "    push %eax\n" ^
                exp2 ^
                "    movl %eax, %ecx\n" ^
-               "    popl %eax\n" ^
+               "    pop %eax\n" ^
                "    shlq %cl, %rax\n"
              end
               | AST.BRight =>
@@ -241,10 +254,10 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
               exp1 ^
-               "    pushl %eax\n" ^
+               "    push %eax\n" ^
                exp2 ^
                "    movl %eax, %ecx\n" ^
-               "    popl %eax\n" ^
+               "    pop %eax\n" ^
                "    shrq %cl, %rax\n"
              end
               | AST.Mod =>
@@ -253,12 +266,12 @@ structure Generate = struct
                 val exp2 = genExp (e2, ctxt)
               in
                 exp1 ^
-                "    pushl %eax\n" ^
+                "    push %eax\n" ^
                 exp2 ^
-                "    popl %ecx\n" ^
-                "    pushl %eax\n" ^
+                "    pop %ecx\n" ^
+                "    push %eax\n" ^
                 "    movl %ecx, %eax\n" ^
-                "    popl %ecx\n" ^
+                "    pop %ecx\n" ^
                 "    cqo\n" ^
                 "    idiv %rcx\n" ^
                 "    movl %edx, %eax\n"
@@ -272,7 +285,7 @@ structure Generate = struct
                of VM.Offset n =>
                 "    movl " ^ Int.toString n ^ "(%rbp), %eax\n"
                 | VM.Register reg =>
-                "    movq " ^ reg ^ ", %eax\n"
+                "    movl " ^ reg ^ ", %eax\n"
             )
           end
        | AST.Assign (s, new_exp) =>
@@ -283,10 +296,10 @@ structure Generate = struct
             (case voffset
                of VM.Offset n =>
                 expstr ^
-                "    movq %eax, " ^ Int.toString n ^ "(%rbp)\n"
+                "    movl %eax, " ^ Int.toString n ^ "(%rbp)\n"
                 | VM.Register reg =>
                 expstr ^
-                "    movq %eax, " ^ reg ^ ", %rax\n"
+                "    movl %eax, " ^ reg ^ ", %rax\n"
             )
           end
        | AST.Conditional (e1, e2, e3) =>
@@ -327,8 +340,8 @@ structure Generate = struct
               "    call _" ^ name ^ "\n" ^
               "    addq $" ^ Int.toString bytes_to_add ^ ", %rsp\n"
             end
-
      )
+     end
   )
   and genFunCall (args_w_ctxt : AST.exp list * VM.pmap * int) : string =
     (case args_w_ctxt
