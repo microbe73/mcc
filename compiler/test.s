@@ -58,7 +58,7 @@ _label1:
     neg  %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $0, %rsp
 _label2:
 _label4:
@@ -66,7 +66,7 @@ _label6:
     movq $0, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $8, %rsp
     movq %rbp, %rsp
     popq %rbp
@@ -82,7 +82,7 @@ _drawRow:
     popq %rcx
     and %rcx, %rax
     pushq %rax
-    movq -16(%rbp), %rax
+    movq 0(%rbp), %rax
     movq %rax,%rdi
     callq _drawChar
     addq $0, %rsp
@@ -98,7 +98,7 @@ _drawRow:
     popq %rcx
     and %rcx, %rax
     pushq %rax
-    movq -32(%rbp), %rax
+    movq -16(%rbp), %rax
     movq %rax,%rdi
     callq _drawChar
     addq $0, %rsp
@@ -114,23 +114,23 @@ _drawRow:
     popq %rcx
     and %rcx, %rax
     pushq %rax
-    movq -48(%rbp), %rax
+    movq -32(%rbp), %rax
     movq %rax,%rdi
     callq _drawChar
     addq $0, %rsp
     pushq %rax
+    movq -8(%rbp), %rax
+    pushq %rax
     movq -24(%rbp), %rax
+    popq %rcx
+    add %rcx, %rax
     pushq %rax
     movq -40(%rbp), %rax
     popq %rcx
     add %rcx, %rax
-    pushq %rax
-    movq -56(%rbp), %rax
-    popq %rcx
-    add %rcx, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $56, %rsp
     movq %rbp, %rsp
     popq %rbp
@@ -173,18 +173,18 @@ _drawBoard:
     movq %rax,%rdi
     callq _putchar
     addq $0, %rsp
-    movq -32(%rbp), %rax
+    movq 16(%rbp), %rax
     pushq %rax
-    movq -40(%rbp), %rax
+    movq 8(%rbp), %rax
     popq %rcx
     add %rcx, %rax
     pushq %rax
-    movq -48(%rbp), %rax
+    movq 0(%rbp), %rax
     popq %rcx
     add %rcx, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $48, %rsp
     movq %rbp, %rsp
     popq %rbp
@@ -216,7 +216,7 @@ _updateRow:
     movq $1, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $0, %rsp
     jmp _label10
 _label9:
@@ -232,14 +232,14 @@ _label9:
     movq $4, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $0, %rsp
     jmp _label8
 _label7:
     movq $16, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
 _label8:
 _label10:
     addq $0, %rsp
@@ -257,7 +257,7 @@ _label15:
     movq $2, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     jmp _label14
 _label13:
     movq -8(%rbp), %rax
@@ -272,14 +272,14 @@ _label13:
     movq $8, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $0, %rsp
     jmp _label12
 _label11:
     movq $32, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
 _label12:
 _label14:
     addq $0, %rsp
@@ -287,7 +287,7 @@ _label16:
     movq $0, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $16, %rsp
     movq %rbp, %rsp
     popq %rbp
@@ -306,6 +306,8 @@ _main:
     pushq %rax
     movq $1, %rax
     pushq %rax
+    movq $0, %rax
+    pushq %rax
 _label17:
     movq -40(%rbp), %rax
     pushq %rax
@@ -314,6 +316,18 @@ _label17:
     cmpq %rax, %rcx
     movq $0, %rax
     setl %al
+    cmpq $0, %rax
+    jne _label19
+    jmp _label20
+_label19:
+    movq -48(%rbp), %rax
+    cmpq  $0, %rax
+    movq  $0, %rax
+    sete  %al
+    cmpq $0, %rax
+    movq $0, %rax
+    setne %al
+_label20:
     cmpq $0, %rax
     je _label18
     movq -8(%rbp), %rax
@@ -333,7 +347,7 @@ _label17:
     sub %rax, %rcx
     movq %rcx, %rax
     pushq %rax
-    movq -48(%rbp), %rax
+    movq -56(%rbp), %rax
     pushq %rax
     movq $1, %rax
     popq %rcx
@@ -341,8 +355,8 @@ _label17:
     movq $0, %rax
     setl %al
     cmpq $0, %rax
-    je _label25
-    movq -48(%rbp), %rax
+    je _label27
+    movq -56(%rbp), %rax
     movq %rax,%rdi
     callq _putchar
     addq $0, %rsp
@@ -362,9 +376,9 @@ _label17:
     movq %rcx, %rax
     movq %rax, -40(%rbp)
     addq $0, %rsp
-    jmp _label26
-_label25:
-    movq -48(%rbp), %rax
+    jmp _label28
+_label27:
+    movq -56(%rbp), %rax
     pushq %rax
     movq $3, %rax
     popq %rcx
@@ -372,10 +386,10 @@ _label25:
     movq $0, %rax
     setle %al
     cmpq $0, %rax
-    je _label23
+    je _label25
     movq -8(%rbp), %rax
     pushq %rax
-    movq -48(%rbp), %rax
+    movq -56(%rbp), %rax
     movq %rax,%rdi
     movq -40(%rbp), %rax
     pushq %rax
@@ -394,9 +408,9 @@ _label25:
     add %rcx, %rax
     movq %rax, -8(%rbp)
     addq $0, %rsp
-    jmp _label24
-_label23:
-    movq -48(%rbp), %rax
+    jmp _label26
+_label25:
+    movq -56(%rbp), %rax
     pushq %rax
     movq $6, %rax
     popq %rcx
@@ -404,10 +418,10 @@ _label23:
     movq $0, %rax
     setle %al
     cmpq $0, %rax
-    je _label21
+    je _label23
     movq -16(%rbp), %rax
     pushq %rax
-    movq -48(%rbp), %rax
+    movq -56(%rbp), %rax
     pushq %rax
     movq $3, %rax
     popq %rcx
@@ -431,9 +445,9 @@ _label23:
     add %rcx, %rax
     movq %rax, -16(%rbp)
     addq $0, %rsp
-    jmp _label22
-_label21:
-    movq -48(%rbp), %rax
+    jmp _label24
+_label23:
+    movq -56(%rbp), %rax
     pushq %rax
     movq $9, %rax
     popq %rcx
@@ -441,10 +455,10 @@ _label21:
     movq $0, %rax
     setle %al
     cmpq $0, %rax
-    je _label19
+    je _label21
     movq -24(%rbp), %rax
     pushq %rax
-    movq -48(%rbp), %rax
+    movq -56(%rbp), %rax
     pushq %rax
     movq $6, %rax
     popq %rcx
@@ -468,9 +482,9 @@ _label21:
     add %rcx, %rax
     movq %rax, -24(%rbp)
     addq $0, %rsp
-    jmp _label20
-_label19:
-    movq -48(%rbp), %rax
+    jmp _label22
+_label21:
+    movq -56(%rbp), %rax
     movq %rax,%rdi
     callq _putchar
     addq $0, %rsp
@@ -490,10 +504,10 @@ _label19:
     movq %rcx, %rax
     movq %rax, -40(%rbp)
     addq $0, %rsp
-_label20:
 _label22:
 _label24:
 _label26:
+_label28:
     movq -40(%rbp), %rax
     pushq %rax
     movq $1, %rax
@@ -518,8 +532,8 @@ _label18:
     movq $0, %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
-    addq $40, %rsp
+    ret
+    addq $48, %rsp
     movq %rbp, %rsp
     popq %rbp
     ret

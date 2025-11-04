@@ -1,3 +1,4 @@
+
     .globl _main
 _main:
     pushq %rbp
@@ -14,7 +15,8 @@ _main:
     movq -16(%rbp), %rax
     movq %rbp, %rsp
     popq %rbp
-    retq
+    ret
     addq $16, %rsp
     movq %rbp, %rsp
     popq %rbp
+    ret

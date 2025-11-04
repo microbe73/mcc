@@ -157,7 +157,7 @@ structure Parse = struct
         nextBXORExpHelper (nextBANDExp tlist)
 
       and nextBANDExpHelper (term_w_tlist : AST.exp * toklist) :
-        AST.exp * (toklist) =
+        AST.exp * toklist =
         (case term_w_tlist
           of (term, T.BAnd :: rest) =>
             nextGenExp (term, rest, nextEQExp, AST.BAnd, nextBANDExpHelper)
