@@ -92,7 +92,7 @@ _drawRow:
     movq -8(%rbp), %rax
     pushq %rax
     movq $2, %rax
-    movq %rax, %rcx
+    popq %rcx
     popq %rax
     shrq %cl, %rax
     popq %rcx
@@ -108,7 +108,7 @@ _drawRow:
     movq -8(%rbp), %rax
     pushq %rax
     movq $4, %rax
-    movq %rax, %rcx
+    popq %rcx
     popq %rax
     shrq %cl, %rax
     popq %rcx

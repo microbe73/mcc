@@ -32,6 +32,21 @@ structure Generate = struct
          | _ => n
       )
     )
+  fun comp_op (exps_w_op : string * string * string) : string =
+    #1(exps_w_op) ^
+    "    pushq %rax\n" ^
+    #2(exps_w_op) ^
+    "    popq %rcx\n" ^
+    "    cmpq %rax, %rcx\n" ^
+    "    movq $0, %rax\n" ^
+    #3(exps_w_op)
+
+  fun arith_op (exps_w_op : string * string * string) : string =
+    #1(exps_w_op) ^
+    "    pushq %rax\n" ^
+    #2(exps_w_op) ^
+    "    popq %rcx\n" ^
+    #3(exps_w_op)
   fun generate (prog : AST.func list) : string =
   let
   fun genExp (exp_w_context : AST.exp * VM.pmap) : string =
@@ -58,54 +73,56 @@ structure Generate = struct
           | AST.BinOp (binop, e1, e2) =>
             (case binop
               of AST.Plus =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-               exp1 ^
-               "    pushq %rax\n" ^
-               exp2 ^
-              "    popq %rcx\n" ^
-              "    add %rcx, %rax\n"
-              end
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt), "    add %rcx, %rax\n")
               | AST.Minus =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-              exp1 ^
-              "    pushq %rax\n" ^
-              exp2 ^
-              "    popq %rcx\n" ^
-              "    sub %rax, %rcx\n" ^
-              "    movq %rcx, %rax\n"
-              end
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+                "    sub %rax, %rcx\n    movq %rcx, %rax\n")
               | AST.Times =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-              exp1 ^
-              "    pushq %rax\n" ^
-              exp2 ^
-              "    popq %rcx\n" ^
-              "    imulq %rcx, %rax\n"
-             end
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt), "")
               | AST.Div =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-              exp1 ^
-              "    pushq %rax\n" ^
-              exp2 ^
-              "    popq %rcx\n" ^
-              "    pushq %rax\n" ^
-              "    movq %rcx, %rax\n" ^
-              "    popq %rcx\n" ^
-              "    cqo\n" ^
-              "    idiv %rcx\n"
-             end
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+                "    pushq %rax\n" ^
+                "    movq %rcx, %rax\n" ^
+                "    popq %rcx\n" ^
+                "    cqo\n" ^
+                "    idiv %rcx\n")
+              | AST.Eq =>
+              comp_op (genExp(e1, ctxt), genExp(e2, ctxt), "    sete %al\n")
+              | AST.Neq =>
+              comp_op (genExp(e1, ctxt), genExp(e2, ctxt), "    setne %al\n")
+              | AST.Leq =>
+              comp_op (genExp(e1, ctxt), genExp(e2, ctxt), "    setle %al\n")
+              | AST.Geq =>
+              comp_op (genExp(e1, ctxt), genExp(e2, ctxt), "    setge %al\n")
+              | AST.Gt =>
+              comp_op (genExp(e1, ctxt), genExp(e2, ctxt), "    setg %al\n")
+              | AST.Lt =>
+              comp_op (genExp(e1, ctxt), genExp(e2, ctxt), "    setl %al\n")
+              | AST.BAnd =>
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+                "    and %rcx, %rax\n")
+              | AST.BOr =>
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+                "    or %rcx, %rax\n")
+              | AST.BXor =>
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+                "    xor %rcx, %rax\n")
+              | AST.BLeft =>
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+               "    popq %rax\n" ^
+               "    shlq %cl, %rax\n")
+              | AST.BRight =>
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+               "    popq %rax\n" ^
+               "    shrq %cl, %rax\n")
+              | AST.Mod =>
+                arith_op (genExp(e1, ctxt), genExp(e2, ctxt),
+                "    pushq %rax\n" ^
+                "    movq %rcx, %rax\n" ^
+                "    popq %rcx\n" ^
+                "    cqo\n" ^
+                "    idiv %rcx\n" ^
+                "    movq %rdx, %rax\n")
               | AST.OR =>
               let
                 val exp1 = genExp (e1, ctxt)
@@ -149,157 +166,6 @@ structure Generate = struct
                  end_label ^ ":\n"
                 end
              end
-              | AST.Eq =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    cmpq %rax, %rcx\n" ^
-                "    movq $0, %rax\n" ^
-                "    sete %al\n"
-             end
-              | AST.Neq =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    cmpq %rax, %rcx\n" ^
-                "    movq $0, %rax\n" ^
-                "    setne %al\n"
-             end
-              | AST.Leq =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    cmpq %rax, %rcx\n" ^
-                "    movq $0, %rax\n" ^
-                "    setle %al\n"
-             end
-              | AST.Geq =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    cmpq %rax, %rcx\n" ^
-                "    movq $0, %rax\n" ^
-                "    setge %al\n"
-             end
-              | AST.Gt =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    cmpq %rax, %rcx\n" ^
-                "    movq $0, %rax\n" ^
-                "    setg %al\n"
-             end
-              | AST.Lt =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    cmpq %rax, %rcx\n" ^
-                "    movq $0, %rax\n" ^
-                "    setl %al\n"
-             end
-              | AST.BAnd =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-               exp1 ^
-               "    pushq %rax\n" ^
-               exp2 ^
-               "    popq %rcx\n" ^
-               "    and %rcx, %rax\n"
-             end
-              | AST.BOr =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-               exp1 ^
-               "    pushq %rax\n" ^
-               exp2 ^
-               "    popq %rcx\n" ^
-               "    or %rcx, %rax\n"
-             end
-              | AST.BXor =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-              exp1 ^
-               "    pushq %rax\n" ^
-               exp2 ^
-               "    popq %rcx\n" ^
-               "    xor %rcx, %rax\n"
-             end
-              | AST.BLeft =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-              exp1 ^
-               "    pushq %rax\n" ^
-               exp2 ^
-               "    movq %rax, %rcx\n" ^
-               "    popq %rax\n" ^
-               "    shlq %cl, %rax\n"
-             end
-              | AST.BRight =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-              exp1 ^
-               "    pushq %rax\n" ^
-               exp2 ^
-               "    movq %rax, %rcx\n" ^
-               "    popq %rax\n" ^
-               "    shrq %cl, %rax\n"
-             end
-              | AST.Mod =>
-              let
-                val exp1 = genExp (e1, ctxt)
-                val exp2 = genExp (e2, ctxt)
-              in
-                exp1 ^
-                "    pushq %rax\n" ^
-                exp2 ^
-                "    popq %rcx\n" ^
-                "    pushq %rax\n" ^
-                "    movq %rcx, %rax\n" ^
-                "    popq %rcx\n" ^
-                "    cqo\n" ^
-                "    idiv %rcx\n" ^
-                "    movq %rdx, %rax\n"
-              end
              )
         | AST.Var s =>
           let
