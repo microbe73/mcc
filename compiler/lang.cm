@@ -8,6 +8,7 @@ Library
     structure VarMap
     structure TypeCheck
     structure CFG
+    structure TAC
 is
     $/basis.cm
     $/regexp-lib.cm
@@ -21,3 +22,4 @@ is
     var-set.sml
     typecheck.sml
     cfg.sml
+    tac.sml
