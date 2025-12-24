@@ -1,7 +1,7 @@
 structure CFG : sig
   type node
   val convert : AST.prog -> node list
-  val rename : AST.func * string * string -> AST.func
+  val rename : AST.block_item list * string * string -> AST.block_item list
   (*val sssa : AST.func -> AST.func (* Handle C variable shadowing *)*)
 end = struct
   datatype node
@@ -20,9 +20,10 @@ end = struct
   (*Sets idk how to do it properly i get its like hash thing but it is what it
      * is*)
 
-  fun rename (fn_w_vars : AST.func * string * string) : AST.func =
+  fun rename (fn_w_vars : AST.block_item list * string * string) :
+    AST.block_item list =
   let
-    val (func, og, fin) = fn_w_vars
+    val (block, og, fin) = fn_w_vars
     fun rename_exp (exp : AST.exp) : AST.exp =
       (case exp
          of AST.Const _ => exp
@@ -66,11 +67,11 @@ end = struct
                 AST.Do (rename_stm body, rename_exp exp)
             | AST.Break => AST.Break
             | AST.Continue => AST.Continue
-            | AST.Compound block => AST.Compound (rename_block block)
+            | AST.Compound stms => AST.Compound (rename_block stms)
         )
       end
-    and rename_block (block : AST.block_item list) : AST.block_item list =
-      (case block
+    and rename_block (stms : AST.block_item list) : AST.block_item list =
+      (case stms
          of [] => []
           | item :: rest =>
             (case item
@@ -88,10 +89,117 @@ end = struct
             )
       )
   in
-    (case func
-       of AST.Fun (_, _, NONE, _) => func
-        | AST.Fun (fname, args, SOME body, rettyp) =>
-          AST.Fun (fname, args, SOME (rename_block body), rettyp)
-    )
+    rename_block block
   end
+
+  fun scoping (func : AST.func) : AST.func =
+  (case func
+    of AST.Fun (fname, arglist, body, rettype) =>
+    let
+      fun add_decl (vars_w_newvar : string list * string) : string list option =
+        let
+          val (vars, newvar) = vars_w_newvar
+          fun isvar (v : string) = v = newvar
+          val valid = not (List.exists isvar vars)
+        in
+          if valid then SOME (newvar :: vars) else NONE
+        end
+      fun scope_stm (stm_w_vars : AST.statement * string list * int) : AST.statement =
+        let
+          val (stm, vars, depth) = stm_w_vars
+        in
+          (case stm
+             of AST.Return _ => stm
+              | AST.Exp _ => stm
+              | AST.If (exp1, stm1, NONE) => AST.If (exp1, scope_stm (stm1, vars,
+                depth), NONE)
+
+              | AST.If (exp1, stm1, SOME stm2) => AST.If (exp1, scope_stm (stm1,
+                vars, depth), SOME (scope_stm (stm2, vars, depth)))
+
+              | AST.For (oexp1, exp2, oexp3, body) =>
+                  AST.For (oexp1, exp2, oexp3, scope_stm (body, vars, depth))
+              | AST.While (exp, body) =>
+                  AST.While (exp, scope_stm (body, vars, depth))
+
+              | AST.Do (body, exp) =>
+                  AST.Do (scope_stm (body, vars, depth), exp)
+
+              | AST.Break => AST.Break
+              | AST.Continue => AST.Continue
+
+              | AST.ForDecl (AST.Declare (typ, name, oval), exp2, oexp, body) =>
+                  let
+                    val ovars' = add_decl (vars, name)
+                  in
+                    (case ovars'
+                       of NONE => raise Fail ("Redeclared variable ` " ^
+                       name ^ "`in for loop: Function " ^ fname)
+                        | SOME vars' =>
+                          AST.ForDecl (AST.Declare (typ, name, oval), exp2, oexp,
+                          scope_stm (body, vars', depth))
+                    )
+                  end
+              | AST.Compound block => AST.Compound (scope_block (block, vars,
+                depth + 1))
+          )
+        end
+      and scope_block (block_w_vars : AST.block_item list * string list * int) : AST.block_item list =
+        let
+          val (block, vars, depth) = block_w_vars
+        in
+          (case block
+             of [] => []
+              | item :: rest =>
+                (case item
+                  of AST.Statement stm => AST.Statement (scope_stm (stm, vars,
+                  depth)) :: scope_block (rest, vars, depth)
+                    | AST.Declaration (AST.Declare (ty, name, oexp)) =>
+                      let
+                        val o_new_vars = add_decl (vars, name)
+                      in
+                        (case o_new_vars
+                          of NONE =>
+                              let
+                                val dname = Int.toString depth ^ name
+                                val o_renewed_vars = add_decl (vars, dname)
+                              in
+                                (case o_renewed_vars
+                                   of NONE => raise Fail
+                                   ("Variable `" ^ name ^ "` declared multiple " ^
+                                   "times in the same scope: Function " ^ fname)
+                                    | SOME renewed_vars =>
+                                      let
+                                        val renamed_block = rename (rest, name,
+                                        dname)
+                                        val updated_decl = AST.Declaration
+                                        (AST.Declare (ty, dname, oexp))
+                                      in
+                                        updated_decl :: scope_block
+                                        (renamed_block, renewed_vars, depth)
+                                      end
+                                )
+                              end
+                            | SOME newvars =>
+                              item :: scope_block (rest, newvars, depth)
+                        )
+                      end
+                )
+          )
+        end
+      in
+        (case body
+           of NONE => func
+            | SOME block =>
+              let
+                val argnames = map #1 arglist
+                val scoped_argnames = map (fn s => "0" ^ s) argnames
+                val initial_scope = argnames @ scoped_argnames
+                val updated_body = scope_block (block, initial_scope, 0)
+              in
+                AST.Fun (fname, arglist, SOME updated_body, rettype)
+              end
+        )
+      end
+    )
 end
