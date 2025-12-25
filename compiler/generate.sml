@@ -525,5 +525,5 @@ structure Generate = struct
           )
     )
   end
-
+  fun tac_generate (tac : TAC.quadruple list) : string = ""
 end
