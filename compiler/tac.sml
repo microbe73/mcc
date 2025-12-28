@@ -14,8 +14,10 @@ end = struct
   | Goto
   | CondGoto of AST.bin_operator
 
+  type symbol = {name : string, vartype : AST.typ, rel_addr : int}
+  (* rel_addr is the offset from %rsp basically *)
   datatype arg
-  = Var of string
+  = Var of symbol
   | Const of int * AST.typ
   | Target of string
 
@@ -29,7 +31,13 @@ end = struct
    * In general hash maps in this library work slightly unusually, almost every
    * function just returns a unit (so the tables are basically just usual
    * imperative tables) *)
-  type symbol = {name : string, vartype : AST.typ, allocated_space : int}
-  fun convert (prog : AST.prog) : quadruple list = []
+  val exc = Fail "key error"
+  fun convert (prog : AST.prog) : quadruple list =
+  let
+    val sym_tbl = HashTable.mkTable (HashString.hashString, op =) (100, exc)
+    fun con_exp (exp : AST.exp) : quadruple list = []
+  in
+    []
+  end
 
 end

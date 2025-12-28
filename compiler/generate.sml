@@ -2,11 +2,11 @@ structure Generate = struct
   structure VM = VarMap
 
   type context = {var_map : VM.pmap, offset : int, continue_label : string
-  option, break_label : string option, current_scope : VM.pmap }
+  option, break_label : string option}
 
   val fresh_context : context =
     {var_map=VM.empty_map, offset = 0, continue_label = NONE, break_label =
-    NONE, current_scope = VM.empty_map }
+    NONE }
 
 
 
@@ -267,7 +267,7 @@ structure Generate = struct
   and genStatement  (b : AST.statement * context) : string =
     (case b
        of (AST.Return exp, {break_label = _, continue_label = _, var_map = vmap,
-       current_scope = _, offset = _}) =>
+       offset = _}) =>
             let
               val exp = genExp (exp, vmap)
             in
@@ -277,16 +277,16 @@ structure Generate = struct
              "    ret\n"
            end
      | (AST.Exp exp_option, {break_label = _, continue_label = _, var_map =
-     vmap, current_scope = _, offset = _}) =>
+     vmap, offset = _}) =>
          (case exp_option
             of NONE => ""
              | SOME exp => genExp (exp, vmap)
          )
      | (AST.If (exp, stm1, NONE), {break_label = bl, continue_label = cl,
-        var_map = vmap, current_scope = cs, offset = n}) =>
+        var_map = vmap, offset = n}) =>
           let
             val curr_context = {break_label = bl, continue_label = cl, var_map =
-              vmap, current_scope = cs, offset = n}
+              vmap, offset = n}
             val cond = genExp (exp, vmap)
             val post_cond = new_label()
             val body = genStatement (stm1, curr_context)
@@ -298,11 +298,11 @@ structure Generate = struct
            post_cond ^ ":\n"
           end
     | (AST.If (exp, stm1, SOME stm2), {break_label = bl, continue_label = cl,
-       var_map = vmap, current_scope = cs, offset = n}) =>
+       var_map = vmap, offset = n}) =>
           let
             val cond = genExp (exp, vmap)
             val curr_context ={break_label = bl, continue_label = cl, var_map =
-              vmap, current_scope = cs, offset = n}
+              vmap, offset = n}
             val if_clause = genStatement (stm1, curr_context)
             val else_clause = genStatement (stm2, curr_context)
             val else_label = new_label()
@@ -318,19 +318,19 @@ structure Generate = struct
            post_cond ^ ":\n"
           end
     | (AST.Compound block_items, {break_label = bl, continue_label = cl,
-       var_map = vmap, current_scope = cs, offset = n}) =>
+       var_map = vmap, offset = n}) =>
       genBlock (block_items, {break_label = bl, continue_label = cl,
-       var_map = vmap, current_scope = VM.empty_map, offset = n})
+       var_map = vmap, offset = n}, 0)
 
     | (AST.While (exp, statement), {break_label = _, continue_label = _,
-       var_map = vmap, current_scope = cs, offset = n}) =>
+       var_map = vmap, offset = n}) =>
         let
           val precond_label = new_label()
           val post_label = new_label()
           val control_exp = genExp (exp, vmap)
           val loop_body = genStatement (statement,
           {break_label = SOME post_label, continue_label = SOME precond_label,
-           var_map = vmap, current_scope = VM.empty_map, offset = n})
+           var_map = vmap, offset = n})
         in
           precond_label ^ ":\n" ^
           control_exp ^
@@ -341,14 +341,14 @@ structure Generate = struct
           post_label ^ ":\n"
         end
     | (AST.Do (statement, exp), {break_label = _, continue_label = _,
-       var_map = vmap, current_scope = cs, offset = n}) =>
+       var_map = vmap, offset = n}) =>
         let
           val precond_label = new_label()
           val post_label = new_label()
           val control_exp = genExp (exp, vmap)
           val loop_body = genStatement (statement,{break_label = SOME
           post_label, continue_label = SOME precond_label, var_map = vmap,
-          current_scope = VM.empty_map, offset = n})
+          offset = n})
         in
           precond_label ^ ":\n" ^
           loop_body ^
@@ -358,31 +358,29 @@ structure Generate = struct
           post_label ^ ":\n"
         end
     | (AST.Break, {break_label = bl, continue_label = _, var_map = _,
-       current_scope = _, offset = _}) =>
+       offset = _}) =>
        (case bl
           of NONE => raise Fail "Break outside of loop body"
            | SOME lbl => "    jmp " ^ lbl ^ "\n"
        )
     | (AST.Continue, {break_label = _, continue_label = cl, var_map = _,
-       current_scope = _, offset = _}) =>
+       offset = _}) =>
        (case cl
           of NONE => raise Fail "Continue outside of loop body"
            | SOME lbl => "    jmp " ^ lbl ^ "\n"
        )
     | (AST.For (exp1, exp2, exp3, body), {break_label = bl, continue_label = cl,
-       var_map = vmap, current_scope = cs, offset = n}) =>
+       var_map = vmap, offset = n}) =>
        let
          val header_context = {break_label = bl, continue_label = cl, var_map =
-           vmap, current_scope = VM.empty_map, offset = n}
+           vmap, offset = n}
          val exp1str = genStatement (AST.Exp exp1, header_context)
          val exp2str = genExp (exp2, vmap)
          val exp3str = genStatement (AST.Exp exp3, header_context)
          val cond_label = new_label()
          val end_label = new_label()
          val loop_body = genStatement (body, {break_label = SOME end_label,
-         continue_label = SOME cond_label, var_map = vmap, current_scope =
-         VM.empty_map,
-         offset = n})
+         continue_label = SOME cond_label, var_map = vmap, offset = n})
        in
          exp1str ^
          cond_label ^ ":\n" ^
@@ -397,16 +395,15 @@ structure Generate = struct
      | (AST.ForDecl (decl, exp2, exp3, body), ctxt) =>
        let
          val (declstr, {break_label = bl, continue_label = cl, var_map = vmap,
-         current_scope = cs, offset = n}) = genDeclaration (decl, ctxt)
+         offset = n}) = genDeclaration (decl, ctxt)
          val new_ctxt = {break_label = bl, continue_label = cl, var_map = vmap,
-         current_scope = cs, offset = n}
+         offset = n}
          val exp2str = genExp (exp2, vmap)
          val exp3str  = genStatement (AST.Exp exp3, new_ctxt)
          val cond_label = new_label()
          val end_label = new_label()
          val loop_body = genStatement (body, {break_label = SOME end_label,
-         continue_label = SOME cond_label, var_map = vmap, current_scope =
-         VM.empty_map, offset = n})
+         continue_label = SOME cond_label, var_map = vmap, offset = n})
        in
          declstr ^
          cond_label ^ ":\n" ^
@@ -429,12 +426,8 @@ structure Generate = struct
     context) =
     (case dec_w_ctxt
       of (AST.Declare (ty, name, opt_exp), {break_label = bl, continue_label =
-      cl, var_map = vmap, current_scope = cs, offset = n}) =>
+      cl, var_map = vmap, offset = n}) =>
         let
-          val _ = if (VM.contains (name, cs)) then
-                    raise Fail "duplicate declaration"
-                  else
-                    0
           val off = n - sizeOf ty
         in
           (case opt_exp
@@ -442,20 +435,18 @@ structure Generate = struct
                   let
                     val new_exp = genExp (exp, vmap)
                     val new_map = VM.ins ((name, VM.Offset off), vmap)
-                    val new_current = VM.ins ((name, VM.Offset off), cs)
                   in
                     (new_exp ^
                     "    pushq %rax\n", {break_label = bl, continue_label = cl,
-                   var_map = new_map, offset = off, current_scope = new_current}
+                   var_map = new_map, offset = off}
                     )
                   end
             | NONE =>
               let
                 val new_map = VM.ins ((name, VM.Offset off), vmap)
-                val new_current = VM.ins ((name, VM.Offset off), cs)
               in
                 ("    pushq $0\n", {break_label = bl, continue_label = cl,
-                   var_map = new_map, offset = off, current_scope = new_current})
+                   var_map = new_map, offset = off})
               end
           )
         end
@@ -469,16 +460,23 @@ structure Generate = struct
         (genStatement (stm, ctxt), ctxt)
     )
 
-  and genBlock (b : (AST.block_item list) * context) : string =
+  and genBlock (b : (AST.block_item list) * context * int) : string =
       (case b
          of ([], {break_label = _, continue_label = _,
-           var_map = _, current_scope = cs, offset = _}) =>
-               "    addq $" ^ Int.toString (VM.vsize cs) ^ ", %rsp\n"
-          | ((bitem :: rest), init_ctxt) =>
+           var_map = _, offset = _}, allocated_size) =>
+               "    addq $" ^ Int.toString (allocated_size) ^ ", %rsp\n"
+          | ((bitem :: rest), {break_label = bl, continue_label = cl, var_map =
+          vm, offset = off}, allocated_size) =>
           let
+            val init_ctxt = {break_label = bl, continue_label = cl, var_map =
+              vm, offset = off}
             val (bitem, new_ctxt) = genBlockItem (bitem, init_ctxt)
           in
-            bitem ^ genBlock (rest, new_ctxt)
+            (case new_ctxt
+               of {break_label = _, continue_label = _, var_map = _,
+            offset = new_off} => bitem ^ genBlock (rest, new_ctxt,
+            allocated_size + new_off - off)
+            )
           end
       )
   and genFunMap (args_w_count : (string * AST.typ) list * int) : VM.pmap  =
@@ -507,14 +505,14 @@ structure Generate = struct
                     val adder = fn (x : int * int) => #1(x) + #2(x)
                     val off = foldl adder 0 (map sizeOf arg_types)
                     val base_context = {break_label=NONE, continue_label=NONE,
-                    var_map=base_map, offset=off, current_scope=base_map}
+                    var_map=base_map, offset=off}
                   in
                      "\n    .globl _" ^ name ^ "\n" ^
                      "_" ^ name ^ ":\n" ^
                      "    pushq %rbp\n" ^
                      "    movq %rsp, %rbp\n" ^
                      genArgStack (arglist, 1) ^
-                     genBlock (body, base_context) ^
+                     genBlock (body, base_context, 0) ^
                      "    movq %rbp, %rsp\n" ^
                      "    popq %rbp\n" ^
                      "    ret" ^

@@ -1,14 +1,8 @@
 structure CFG : sig
-  type node
-  val convert : AST.prog -> node list
+  val scoping : AST.func -> AST.func
   val rename : AST.block_item list * string * string -> AST.block_item list
   (*val sssa : AST.func -> AST.func (* Handle C variable shadowing *)*)
 end = struct
-  datatype node
-  = BinOp of string * string * AST.bin_operator * string
-  | UnOp of string * AST.un_operator * string
-
-  fun convert (_ : AST.prog) = []
 
   (*AST.func * Set of Variables * Scope level (int) *)
   (*If a variable declared is in the set of variables, prefix it with

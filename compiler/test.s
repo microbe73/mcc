@@ -67,7 +67,7 @@ _label6:
     movq %rbp, %rsp
     popq %rbp
     ret
-    addq $8, %rsp
+    addq $0, %rsp
     movq %rbp, %rsp
     popq %rbp
     ret
@@ -131,7 +131,7 @@ _drawRow:
     movq %rbp, %rsp
     popq %rbp
     ret
-    addq $56, %rsp
+    addq $-48, %rsp
     movq %rbp, %rsp
     popq %rbp
     ret
@@ -185,7 +185,7 @@ _drawBoard:
     movq %rbp, %rsp
     popq %rbp
     ret
-    addq $48, %rsp
+    addq $-24, %rsp
     movq %rbp, %rsp
     popq %rbp
     ret
@@ -288,7 +288,7 @@ _label16:
     movq %rbp, %rsp
     popq %rbp
     ret
-    addq $16, %rsp
+    addq $0, %rsp
     movq %rbp, %rsp
     popq %rbp
     ret
@@ -517,7 +517,7 @@ _label28:
     callq _getchar
     addq $0, %rsp
     pushq %rax
-    addq $16, %rsp
+    addq $-16, %rsp
     jmp _label17
 _label18:
     movq -8(%rbp), %rax
@@ -533,7 +533,7 @@ _label18:
     movq %rbp, %rsp
     popq %rbp
     ret
-    addq $48, %rsp
+    addq $-48, %rsp
     movq %rbp, %rsp
     popq %rbp
     ret
