@@ -41,8 +41,6 @@ structure AST = struct
     | Exp of exp option
     | If of exp * statement * (statement option)
     | Compound of block_item list
-    | For of exp option * exp * exp option * statement
-    | ForDecl of declaration * exp * exp option  * statement
     | While of exp * statement
     | Do of statement * exp
     | Break

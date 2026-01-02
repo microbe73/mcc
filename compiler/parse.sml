@@ -492,8 +492,7 @@ structure Parse = struct
                            let
                              val (body, toks) = nextStatement rest'''
                            in
-                             (AST.For (NONE, AST.Const 1, NONE,
-                              body), rest''')
+                             (AST.While (AST.Const 1, body), toks)
                            end
                         | _ =>
                             let
@@ -504,8 +503,9 @@ structure Parse = struct
                                   let
                                     val (body, toks) = nextStatement rest'''
                                   in
-                                    (AST.For (NONE, AST.Const 1, SOME exp2,
-                                     body), toks)
+                                    (AST.While (AST.Const 1, AST.Compound
+                                    (AST.Statement (AST.Exp (SOME exp2)) ::
+                                    [AST.Statement body])), toks)
                                   end
                                 | _ =>
                                 raise Fail "For loop unclosed paren"
@@ -523,7 +523,7 @@ structure Parse = struct
                                  let
                                    val (body, toks) = nextStatement rest'''
                                  in
-                                   (AST.For (NONE, exp1, NONE, body), rest''')
+                                   (AST.While (exp1, body), toks)
                                  end
                               | _ =>
                                   let
@@ -534,9 +534,11 @@ structure Parse = struct
                                         let
                                           val (body, toks) = nextStatement
                                           rest'''
+                                          val while_body = AST.Compound
+                                          [AST.Statement body, AST.Statement
+                                          (AST.Exp (SOME exp2))]
                                         in
-                                          (AST.For (NONE, exp1, SOME exp2,
-                                           body), toks)
+                                          (AST.While (exp1, while_body), toks)
                                         end
                                       | _ =>
                                       raise Fail "For loop unclosed paren"
@@ -561,8 +563,15 @@ structure Parse = struct
                                 let
                                   val (body, toks) = nextStatement rest'''
                                 in
-                                  (AST.ForDecl (decl, AST.Const 1, NONE, body),
-                                   toks)
+                                  (case body
+                                    of AST.Compound items => (AST.While
+                                    (AST.Const 1, AST.Compound (AST.Declaration
+                                    decl :: items)), toks)
+                                      | _ => (AST.While (AST.Const 1, AST.Compound ([AST.Declaration
+                                  decl, AST.Statement body])), toks)
+                                  )
+                                  (*(AST.ForDecl (decl, AST.Const 1, NONE, body),*)
+                                  (* toks)*)
                                 end
                               | _ =>
                                   let
@@ -574,8 +583,20 @@ structure Parse = struct
                                               val (body, toks) =
                                                 nextStatement rest'''
                                             in
-                                              (AST.ForDecl (decl, AST.Const 1,
-                                               SOME exp2, body), toks)
+                                              (case body
+                                                of AST.Compound items =>
+                                                  (AST.While (AST.Const 1,
+                                                   AST.Compound (
+                                                   AST.Declaration decl ::
+                                                   items @
+                                                   [AST.Statement (AST.Exp (SOME
+                                                   exp2))])), toks)
+                                                  | _ =>
+                                                  (AST.While (AST.Const 1,
+                                                   AST.Compound (
+                                                   [AST.Declaration decl,
+                                                    AST.Statement body])), toks)
+                                              )
                                             end
                                          | _ => raise Fail ("for loop" ^
                                          "missing )")
@@ -594,8 +615,17 @@ structure Parse = struct
                                             val (body, toks) =
                                               nextStatement rest'''
                                           in
-                                            (AST.ForDecl (decl, exp1, NONE,
-                                             body), toks)
+                                            (case body
+                                               of AST.Compound items =>
+                                                (AST.While (exp1, AST.Compound (AST.Declaration
+                                                decl :: items)), toks)
+                                                | _ => (AST.While (exp1,
+                                                  AST.Compound [AST.Declaration
+                                                  decl, AST.Statement body]),
+                                                  toks)
+                                            )
+                                            (*(AST.ForDecl (decl, exp1, NONE,*)
+                                            (* body), toks)*)
                                           end
                                          | _ =>
                                             let
@@ -610,8 +640,23 @@ structure Parse = struct
                                                      nextStatement
                                                      rest'''
                                                  in
-                                                  (AST.ForDecl (decl, exp1, SOME
-                                                  exp2, body), toks)
+                                                   (case body
+                                                    of AST.Compound items =>
+                                                      (AST.While (exp1,
+                                                       AST.Compound
+                                                       (AST.Declaration decl ::
+                                                       items @ [AST.Statement
+                                                       (AST.Exp (SOME exp2))])), toks)
+                                                      | _ =>
+                                                      (AST.While (exp1,
+                                                       AST.Compound
+                                                       ([AST.Declaration decl,
+                                                         AST.Statement body,
+                                                         AST.Statement (AST.Exp
+                                                         (SOME exp2))])), toks)
+                                                   )
+                                                  (*(AST.ForDecl (decl, exp1, SOME*)
+                                                  (*exp2, body), toks)*)
                                                  end
                                                  | _ => raise Fail
                                                  "for loop missing )"
@@ -632,8 +677,10 @@ structure Parse = struct
                                 let
                                   val (body, toks) = nextStatement rest'''
                                 in
-                                  (AST.For (exp_option, AST.Const 1, NONE,
-                                   body), toks)
+                                  (AST.While (AST.Const 1, AST.Compound
+                                  [AST.Statement stm, AST.Statement body]), toks)
+                                  (*(AST.For (exp_option, AST.Const 1, NONE,*)
+                                  (* body), toks)*)
                                 end
                               | _ =>
                                   let
@@ -645,8 +692,14 @@ structure Parse = struct
                                               val (body, toks) =
                                                 nextStatement rest'''
                                             in
-                                              (AST.For (exp_option, AST.Const 1,
-                                               SOME exp2, body), toks)
+                                              (AST.While (AST.Const 1,
+                                               AST.Compound [AST.Statement
+                                               (AST.Exp exp_option),
+                                                AST.Statement body,
+                                                AST.Statement (AST.Exp (SOME
+                                                exp2))]), toks)
+                                              (*(AST.For (exp_option, AST.Const 1,*)
+                                              (* SOME exp2, body), toks)*)
                                             end
                                          | _ => raise Fail ("for loop" ^
                                          "missing )")
@@ -665,8 +718,11 @@ structure Parse = struct
                                             val (body, toks) =
                                               nextStatement rest'''
                                           in
-                                            (AST.For (exp_option, exp1, NONE,
-                                             body), toks)
+                                            (AST.While (exp1, AST.Compound
+                                            [AST.Statement (AST.Exp exp_option),
+                                             AST.Statement body]), toks)
+                                            (*(AST.For (exp_option, exp1, NONE,*)
+                                            (* body), toks)*)
                                           end
                                          | _ =>
                                             let
@@ -681,8 +737,13 @@ structure Parse = struct
                                                      nextStatement
                                                      rest'''
                                                  in
-                                                  (AST.For (exp_option, exp1,
-                                                   SOME exp2, body), toks)
+                                                  (AST.While (exp1, AST.Compound
+                                                  [AST.Statement (AST.Exp
+                                                  exp_option), AST.Statement
+                                                  body, AST.Statement (AST.Exp
+                                                  (SOME exp2))]), toks)
+                                                  (*(AST.For (exp_option, exp1,*)
+                                                  (* SOME exp2, body), toks)*)
                                                  end
                                                  | _ => raise Fail
                                                  "for loop missing )"

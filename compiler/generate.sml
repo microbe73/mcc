@@ -369,52 +369,52 @@ structure Generate = struct
           of NONE => raise Fail "Continue outside of loop body"
            | SOME lbl => "    jmp " ^ lbl ^ "\n"
        )
-    | (AST.For (exp1, exp2, exp3, body), {break_label = bl, continue_label = cl,
-       var_map = vmap, offset = n}) =>
-       let
-         val header_context = {break_label = bl, continue_label = cl, var_map =
-           vmap, offset = n}
-         val exp1str = genStatement (AST.Exp exp1, header_context)
-         val exp2str = genExp (exp2, vmap)
-         val exp3str = genStatement (AST.Exp exp3, header_context)
-         val cond_label = new_label()
-         val end_label = new_label()
-         val loop_body = genStatement (body, {break_label = SOME end_label,
-         continue_label = SOME cond_label, var_map = vmap, offset = n})
-       in
-         exp1str ^
-         cond_label ^ ":\n" ^
-         exp2str ^
-         "    cmpq $0, %rax\n" ^
-         "    je " ^ end_label ^ "\n" ^
-         loop_body ^
-         exp3str ^
-         "    jmp " ^ end_label ^ "\n" ^
-         end_label ^ ":\n"
-       end
-     | (AST.ForDecl (decl, exp2, exp3, body), ctxt) =>
-       let
-         val (declstr, {break_label = bl, continue_label = cl, var_map = vmap,
-         offset = n}) = genDeclaration (decl, ctxt)
-         val new_ctxt = {break_label = bl, continue_label = cl, var_map = vmap,
-         offset = n}
-         val exp2str = genExp (exp2, vmap)
-         val exp3str  = genStatement (AST.Exp exp3, new_ctxt)
-         val cond_label = new_label()
-         val end_label = new_label()
-         val loop_body = genStatement (body, {break_label = SOME end_label,
-         continue_label = SOME cond_label, var_map = vmap, offset = n})
-       in
-         declstr ^
-         cond_label ^ ":\n" ^
-         exp2str ^
-         "    cmpq $0, %rax\n" ^
-         "    je " ^ end_label ^ "\n" ^
-         loop_body ^
-         exp3str ^
-         "    jmp " ^ end_label ^ "\n" ^
-         end_label ^ ":\n"
-       end
+    (*| (AST.For (exp1, exp2, exp3, body), {break_label = bl, continue_label = cl,*)
+    (*   var_map = vmap, offset = n}) =>*)
+    (*   let*)
+    (*     val header_context = {break_label = bl, continue_label = cl, var_map =*)
+    (*       vmap, offset = n}*)
+    (*     val exp1str = genStatement (AST.Exp exp1, header_context)*)
+    (*     val exp2str = genExp (exp2, vmap)*)
+    (*     val exp3str = genStatement (AST.Exp exp3, header_context)*)
+    (*     val cond_label = new_label()*)
+    (*     val end_label = new_label()*)
+    (*     val loop_body = genStatement (body, {break_label = SOME end_label,*)
+    (*     continue_label = SOME cond_label, var_map = vmap, offset = n})*)
+    (*   in*)
+    (*     exp1str ^*)
+    (*     cond_label ^ ":\n" ^*)
+    (*     exp2str ^*)
+    (*     "    cmpq $0, %rax\n" ^*)
+    (*     "    je " ^ end_label ^ "\n" ^*)
+    (*     loop_body ^*)
+    (*     exp3str ^*)
+    (*     "    jmp " ^ end_label ^ "\n" ^*)
+    (*     end_label ^ ":\n"*)
+    (*   end*)
+     (*| (AST.ForDecl (decl, exp2, exp3, body), ctxt) =>*)
+     (*  let*)
+     (*    val (declstr, {break_label = bl, continue_label = cl, var_map = vmap,*)
+     (*    offset = n}) = genDeclaration (decl, ctxt)*)
+     (*    val new_ctxt = {break_label = bl, continue_label = cl, var_map = vmap,*)
+     (*    offset = n}*)
+     (*    val exp2str = genExp (exp2, vmap)*)
+     (*    val exp3str  = genStatement (AST.Exp exp3, new_ctxt)*)
+     (*    val cond_label = new_label()*)
+     (*    val end_label = new_label()*)
+     (*    val loop_body = genStatement (body, {break_label = SOME end_label,*)
+     (*    continue_label = SOME cond_label, var_map = vmap, offset = n})*)
+     (*  in*)
+     (*    declstr ^*)
+     (*    cond_label ^ ":\n" ^*)
+     (*    exp2str ^*)
+     (*    "    cmpq $0, %rax\n" ^*)
+     (*    "    je " ^ end_label ^ "\n" ^*)
+     (*    loop_body ^*)
+     (*    exp3str ^*)
+     (*    "    jmp " ^ end_label ^ "\n" ^*)
+     (*    end_label ^ ":\n"*)
+     (*  end*)
     )
 
   and sizeOf (t : AST.typ) : int =

@@ -49,12 +49,12 @@ end = struct
               rename_stm stm1, SOME (rename_stm stm2))
             | AST.Exp NONE => AST.Exp NONE
             | AST.Exp oexp => AST.Exp (rename_opt_exp oexp)
-            | AST.For (oexp1, exp2, oexp3, body) =>
-                AST.For (rename_opt_exp oexp1, rename_exp exp2, rename_opt_exp
-                oexp3, rename_stm body)
-            | AST.ForDecl (decl, exp2, oexp, body) =>
-                AST.ForDecl (decl, rename_exp exp2, rename_opt_exp oexp,
-                rename_stm body)
+            (*| AST.For (oexp1, exp2, oexp3, body) =>*)
+            (*    AST.For (rename_opt_exp oexp1, rename_exp exp2, rename_opt_exp*)
+            (*    oexp3, rename_stm body)*)
+            (*| AST.ForDecl (decl, exp2, oexp, body) =>*)
+            (*    AST.ForDecl (decl, rename_exp exp2, rename_opt_exp oexp,*)
+            (*    rename_stm body)*)
             | AST.While (exp, body) =>
                 AST.While (rename_exp exp, rename_stm body)
             | AST.Do (body, exp) =>
@@ -111,8 +111,8 @@ end = struct
               | AST.If (exp1, stm1, SOME stm2) => AST.If (exp1, scope_stm (stm1,
                 vars, depth), SOME (scope_stm (stm2, vars, depth)))
 
-              | AST.For (oexp1, exp2, oexp3, body) =>
-                  AST.For (oexp1, exp2, oexp3, scope_stm (body, vars, depth))
+              (*| AST.For (oexp1, exp2, oexp3, body) =>*)
+              (*    AST.For (oexp1, exp2, oexp3, scope_stm (body, vars, depth))*)
               | AST.While (exp, body) =>
                   AST.While (exp, scope_stm (body, vars, depth))
 
@@ -122,18 +122,18 @@ end = struct
               | AST.Break => AST.Break
               | AST.Continue => AST.Continue
 
-              | AST.ForDecl (AST.Declare (typ, name, oval), exp2, oexp, body) =>
-                  let
-                    val ovars' = add_decl (vars, name)
-                  in
-                    (case ovars'
-                       of NONE => raise Fail ("Redeclared variable ` " ^
-                       name ^ "`in for loop: Function " ^ fname)
-                        | SOME vars' =>
-                          AST.ForDecl (AST.Declare (typ, name, oval), exp2, oexp,
-                          scope_stm (body, vars', depth))
-                    )
-                  end
+              (*| AST.ForDecl (AST.Declare (typ, name, oval), exp2, oexp, body) =>*)
+              (*    let*)
+              (*      val ovars' = add_decl (vars, name)*)
+              (*    in*)
+              (*      (case ovars'*)
+              (*         of NONE => raise Fail ("Redeclared variable ` " ^*)
+              (*         name ^ "`in for loop: Function " ^ fname)*)
+              (*          | SOME vars' =>*)
+              (*            AST.ForDecl (AST.Declare (typ, name, oval), exp2, oexp,*)
+              (*            scope_stm (body, vars', depth))*)
+              (*      )*)
+              (*    end*)
               | AST.Compound block => AST.Compound (scope_block (block, vars,
                 depth + 1))
           )
