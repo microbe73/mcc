@@ -13,7 +13,6 @@ end = struct
   | Param of string
   | Copy
   | Goto
-  | CondGoto of AST.bin_operator
 
   type symbol = {name : string, vartype : AST.typ, rel_addr : int}
   (* rel_addr is the offset from %rsp basically *)
@@ -92,6 +91,19 @@ end = struct
               [{label=NONE, o=NONE, arg1=NONE, arg2=NONE,result= SOME (Var
               vinfo)}]
             end
+      )
+    and con_stm (stm : AST.statement) : quadruple list =
+      (case stm
+        of AST.If (exp, true_stm, NONE) =>
+          let
+            val false_label = new_label()
+            val bool_exp = con_exp exp
+            val body = con_stm true_stm
+            val final_val = #result(List.last bool_exp)
+          in
+            bool_exp @ [{label=NONE, o=SOME Goto, arg1=final_val,
+            arg2=NONE, result = SOME (Target false_label)}] @ body
+          end
       )
   in
     []
