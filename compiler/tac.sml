@@ -25,6 +25,7 @@ end = struct
   type quadruple = {label : string option, o : oper option, arg1 : arg option, arg2 : arg
   option, result : arg option }
 
+  type stmInfo = {continue_label : string option, break_label : string option}
   (*https://smlnj.org/doc/smlnj-lib/Util/str-HashTable.html
    * In particular, using the copy function each time a new scope is created can
    * allow for unique symbol tables for each scope [but i don't love that idea]
@@ -33,14 +34,14 @@ end = struct
    * function just returns a unit (so the tables are basically just usual
    * imperative tables) *)
   val label_count = ref 0
-  fun new_label (a : unit) : string =
+  fun new_label (_ : unit) : string =
   let
     val _ = label_count := !label_count + 1
   in
     "L" ^ Int.toString (!label_count)
   end
   val var_count = ref 0
-  fun new_var (a : unit) : string =
+  fun new_var (_ : unit) : string =
   let
     val _ = var_count := !var_count + 1
   in
@@ -84,7 +85,7 @@ end = struct
               tac1 @ [{label=NONE, o=SOME Copy, arg1=arg_addr1, arg2=NONE,
               result = SOME (Var vinfo)}]
             end
-          | AST.Var (vname) =>
+          | AST.Var vname =>
             let
               val vinfo = HashTable.lookup sym_tbl vname
             in
@@ -92,18 +93,64 @@ end = struct
               vinfo)}]
             end
       )
-    and con_stm (stm : AST.statement) : quadruple list =
-      (case stm
-        of AST.If (exp, true_stm, NONE) =>
+    and con_stm (stm_w_info : AST.statement * stmInfo) : quadruple list =
+      (case stm_w_info
+        of (AST.If (exp, true_stm, NONE), info) =>
           let
             val false_label = new_label()
             val bool_exp = con_exp exp
-            val body = con_stm true_stm
-            val final_val = #result(List.last bool_exp)
+            val body = con_stm (true_stm, info)
+            val exp_val = #result(List.last bool_exp)
           in
-            bool_exp @ [{label=NONE, o=SOME Goto, arg1=final_val,
-            arg2=NONE, result = SOME (Target false_label)}] @ body
+            bool_exp @ {label=NONE, o=SOME Goto, arg1=exp_val,
+            arg2=NONE, result = SOME (Target false_label)} :: body @
+            [{label=SOME false_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
           end
+         | (AST.If (exp, true_stm, SOME false_stm), info) =>
+           let
+             val false_label = new_label ()
+             val bool_exp = con_exp exp
+             val exp_val = #result (List.last bool_exp)
+             val true_body = con_stm (true_stm, info)
+             val false_body = con_stm (false_stm, info)
+             val end_label = new_label ()
+           in
+             bool_exp @
+             ({label=NONE, o=SOME Goto, arg1=exp_val, arg2=NONE, result = SOME
+             (Target false_label)} ::
+             true_body) @
+             {label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result=SOME
+             (Target end_label)} ::
+             {label=SOME false_label, o=NONE, arg1=NONE, arg2=NONE,
+              result=NONE} ::
+             false_body @
+             [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
+           end
+          | (AST.While (exp, body), _) =>
+           let
+             val loop_label = new_label ()
+             val end_label = new_label ()
+             val bool_exp = con_exp exp
+             val exp_val = #result (List.last bool_exp)
+             val loop_body = con_stm (body, {continue_label=SOME loop_label,
+             break_label=SOME end_label})
+           in
+             ({label=SOME loop_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE} ::
+             bool_exp) @
+             ({label=NONE, o=SOME Goto, arg1=exp_val, arg2=NONE, result = SOME
+             (Target end_label)} :: loop_body) @
+             [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
+           end
+          | (AST.Break, {continue_label=_, break_label=SOME bl}) =>
+              [{label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result = SOME
+              (Target bl)}]
+          | (AST.Break, {continue_label=_, break_label=NONE}) =>
+              raise Fail "Break outside loop"
+          | (AST.Continue, {continue_label=SOME cl, break_label=_}) =>
+              [{label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result = SOME
+              (Target cl)}]
+          | (AST.Continue, {continue_label=NONE, break_label=_}) =>
+              raise Fail "Continue outside loop"
       )
   in
     []
