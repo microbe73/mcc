@@ -27,6 +27,20 @@ structure AST = struct
   datatype typ
     = Int
 
+  (*datatype rel_op*)
+  (*=  Eq*)
+  (*| Neq*)
+  (*| Leq*)
+  (*| Lt*)
+  (*| Gt*)
+  (*| Geq*)
+  (**)
+  (*datatype bool_exp*)
+  (*= Not of exp*)
+  (*| And of exp * exp*)
+  (*| Or of exp * exp*)
+  (*| RelOp of rel_op * exp * exp*)
+
   datatype exp
     = Const of int
     | UnOp of un_operator * exp

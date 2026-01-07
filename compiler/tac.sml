@@ -13,6 +13,7 @@ end = struct
   | Param of string
   | Copy
   | Goto
+  (* | CondGoto of rel_op *)
 
   type symbol = {name : string, vartype : AST.typ, rel_addr : int}
   (* rel_addr is the offset from %rsp basically *)
@@ -92,27 +93,13 @@ end = struct
               [{label=NONE, o=NONE, arg1=NONE, arg2=NONE,result= SOME (Var
               vinfo)}]
             end
-      )
-    and con_stm (stm_w_info : AST.statement * stmInfo) : quadruple list =
-      (case stm_w_info
-        of (AST.If (exp, true_stm, NONE), info) =>
-          let
-            val false_label = new_label()
-            val bool_exp = con_exp exp
-            val body = con_stm (true_stm, info)
-            val exp_val = #result(List.last bool_exp)
-          in
-            bool_exp @ {label=NONE, o=SOME Goto, arg1=exp_val,
-            arg2=NONE, result = SOME (Target false_label)} :: body @
-            [{label=SOME false_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
-          end
-         | (AST.If (exp, true_stm, SOME false_stm), info) =>
-           let
+          | AST.Conditional (cond_exp, true_exp, false_exp) =>
+            let
              val false_label = new_label ()
-             val bool_exp = con_exp exp
+             val bool_exp = con_exp cond_exp
              val exp_val = #result (List.last bool_exp)
-             val true_body = con_stm (true_stm, info)
-             val false_body = con_stm (false_stm, info)
+             val true_body = con_exp true_exp
+             val false_body = con_exp false_exp
              val end_label = new_label ()
            in
              bool_exp @
@@ -125,33 +112,88 @@ end = struct
               result=NONE} ::
              false_body @
              [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
-           end
-          | (AST.While (exp, body), _) =>
-           let
-             val loop_label = new_label ()
-             val end_label = new_label ()
-             val bool_exp = con_exp exp
-             val exp_val = #result (List.last bool_exp)
-             val loop_body = con_stm (body, {continue_label=SOME loop_label,
-             break_label=SOME end_label})
-           in
-             ({label=SOME loop_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE} ::
-             bool_exp) @
-             ({label=NONE, o=SOME Goto, arg1=exp_val, arg2=NONE, result = SOME
-             (Target end_label)} :: loop_body) @
-             [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
-           end
-          | (AST.Break, {continue_label=_, break_label=SOME bl}) =>
-              [{label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result = SOME
-              (Target bl)}]
-          | (AST.Break, {continue_label=_, break_label=NONE}) =>
-              raise Fail "Break outside loop"
-          | (AST.Continue, {continue_label=SOME cl, break_label=_}) =>
-              [{label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result = SOME
-              (Target cl)}]
-          | (AST.Continue, {continue_label=NONE, break_label=_}) =>
-              raise Fail "Continue outside loop"
+            end
+          | AST.FunCall (_, _) => raise Fail "Implement function calls" (*TODO*)
+
       )
+    and con_stm (stm_w_info : AST.statement * stmInfo) : quadruple list =
+
+      case stm_w_info
+        of (AST.If (exp, true_stm, NONE), info) =>
+             let
+               val false_label = new_label()
+               val bool_exp = con_exp exp
+               val body = con_stm (true_stm, info)
+               val exp_val = #result(List.last bool_exp)
+            in
+              bool_exp @ {label=NONE, o=SOME Goto, arg1=exp_val,
+              arg2=NONE, result = SOME (Target false_label)} :: body @
+              [{label=SOME false_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
+            end
+         | (AST.If (exp, true_stm, SOME false_stm), info) =>
+             let
+               val false_label = new_label ()
+               val bool_exp = con_exp exp
+               val exp_val = #result (List.last bool_exp)
+               val true_body = con_stm (true_stm, info)
+               val false_body = con_stm (false_stm, info)
+               val end_label = new_label ()
+             in
+               bool_exp @
+               ({label=NONE, o=SOME Goto, arg1=exp_val, arg2=NONE, result = SOME
+               (Target false_label)} ::
+               true_body) @
+               {label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result=SOME
+               (Target end_label)} ::
+               {label=SOME false_label, o=NONE, arg1=NONE, arg2=NONE,
+                result=NONE} ::
+                false_body @
+                [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
+             end
+         | (AST.While (exp, body), _) =>
+             let
+               val loop_label = new_label ()
+               val end_label = new_label ()
+               val bool_exp = con_exp exp
+               val exp_val = #result (List.last bool_exp)
+               val loop_body = con_stm (body, {continue_label=SOME loop_label,
+               break_label=SOME end_label})
+             in
+               ({label=SOME loop_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE} ::
+               bool_exp) @
+               ({label=NONE, o=SOME Goto, arg1=exp_val, arg2=NONE, result = SOME
+               (Target end_label)} :: loop_body) @
+               [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
+             end
+         | (AST.Do (body, exp), _) =>
+             let
+               val loop_label = new_label ()
+               val end_label = new_label ()
+               val bool_exp = con_exp exp
+               val exp_val = #result (List.last bool_exp)
+               val loop_body = con_stm (body, {continue_label=SOME loop_label,
+               break_label=SOME end_label})
+             in
+               loop_body @
+               [{label=SOME end_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE}]
+               @
+               ({label=SOME loop_label, o=NONE, arg1=NONE, arg2=NONE, result=NONE} ::
+               bool_exp) @
+               [{label=NONE, o=SOME Goto, arg1=exp_val, arg2=NONE, result = SOME
+               (Target end_label)}]
+             end
+         | (AST.Break, {continue_label=_, break_label=SOME bl}) =>
+             [{label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result = SOME
+             (Target bl)}]
+         | (AST.Break, {continue_label=_, break_label=NONE}) =>
+             raise Fail "Break outside loop"
+         | (AST.Continue, {continue_label=SOME cl, break_label=_}) =>
+             [{label=NONE, o=SOME Goto, arg1=NONE, arg2=NONE, result = SOME
+             (Target cl)}]
+         | (AST.Continue, {continue_label=NONE, break_label=_}) =>
+             raise Fail "Continue outside loop"
+         | (AST.Exp (SOME exp), {continue_label=_, break_label=_}) => con_exp exp
+         | (AST.Exp NONE , {continue_label=_, break_label=_}) => []
   in
     []
   end
