@@ -15,8 +15,7 @@ end = struct
   | Goto
   (* | CondGoto of rel_op *)
 
-  type symbol = {name : string, vartype : AST.typ, rel_addr : int}
-  (* rel_addr is the offset from %rsp basically *)
+  type symbol = {name : string, vartype : AST.typ}
   datatype arg
   = Var of symbol
   | Const of int * AST.typ
@@ -52,7 +51,10 @@ end = struct
   val exc = Fail "key error"
   fun convert (prog : AST.prog) : quadruple list =
   let
-    val sym_tbl = HashTable.mkTable (HashString.hashString, op =) (100, exc)
+    val sym_tbl : ((string, symbol) HashTable.hash_table) = HashTable.mkTable
+    (HashString.hashString, op =) (100, exc) 
+    val lcl_tbl : ((string, symbol) HashTable.hash_table) = HashTable.mkTable
+    (HashString.hashString, op =) (20, exc)
     fun con_exp (exp : AST.exp) : quadruple list =
       (case exp
         of AST.Const n => [{label=NONE, o=NONE, arg1=NONE, arg2=NONE,result=
@@ -61,7 +63,7 @@ end = struct
             let
               val nv = new_var ()
               val tac1 = con_exp exp1
-              val arg_addr = #result(List.last tac1)
+              val arg_addr : arg option = #result(List.last tac1)
             in
               tac1 @ [{label=NONE, o=SOME (UnOp oper), arg1=arg_addr,
               arg2=NONE,result=SOME (Tmp nv)}]
@@ -117,8 +119,7 @@ end = struct
 
       )
     and con_stm (stm_w_info : AST.statement * stmInfo) : quadruple list =
-
-      case stm_w_info
+      (case stm_w_info
         of (AST.If (exp, true_stm, NONE), info) =>
              let
                val false_label = new_label()
@@ -194,6 +195,51 @@ end = struct
              raise Fail "Continue outside loop"
          | (AST.Exp (SOME exp), {continue_label=_, break_label=_}) => con_exp exp
          | (AST.Exp NONE , {continue_label=_, break_label=_}) => []
+         | (AST.Compound itms, {break_label = bl, continue_label = cl}) =>
+             let
+               val _ = HashTable.clear lcl_tbl
+             in
+               []
+             end
+         | (AST.Return exp, _) => raise Fail "Implement function calls" (*TODO*)
+
+      )
+    and con_bitem (bitem_w_info : AST.block_item * stmInfo) : quadruple list =
+      (case bitem_w_info
+        of (AST.Declaration (AST.Declare (vtype, name, SOME exp)), _) =>
+             let
+               val exp_tac = con_exp exp
+               val arg_addr = #result(List.last exp_tac)
+               val sym_info = {name = name, vartype = vtype}
+               val _ = HashTable.insert sym_tbl (name, sym_info)
+               (* Apparently insertWith isn't a thing? *)
+               val redeclare = HashTable.inDomain lcl_tbl name
+               val _ = if redeclare then raise Fail ("Variable `" ^ name ^ 
+               "`declared twice in same scope") else ()
+             in
+               exp_tac @ [{label=NONE, o=SOME Copy, arg1=arg_addr, arg2=NONE,
+               result = SOME (Var sym_info)}]
+             end
+          | (AST.Declaration (AST.Declare (vtype, name, NONE)), _) =>
+             let
+               val sym_info = {name = name, vartype = vtype}
+               val _ = HashTable.insert sym_tbl (name, sym_info)
+               val redeclare = HashTable.inDomain lcl_tbl name
+               val _ = if redeclare then raise Fail ("Variable `" ^ name ^ 
+               "`declared twice in same scope") else ()
+             in
+               []
+             end
+          | (AST.Statement stm, jumps) => con_stm (stm, jumps)
+      )
+    and con_bitem_list (bitems_w_info : AST.block_item list * stmInfo) :
+      quadruple list =
+      let
+        val (items, lbls) = bitems_w_info
+        fun con_bitem' (itm : AST.block_item) = con_bitem (itm, lbls)
+      in
+        List.foldr op@ [] (List.map con_bitem' items)
+      end
   in
     []
   end
